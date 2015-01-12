@@ -26,7 +26,7 @@ import java.io.*;
  * Time: 00:41
  *
  */
-public class CreateBitmap {
+public class PagerankTest {
 
     String testData = "data/web-BerkStan.txt.gz";
 
