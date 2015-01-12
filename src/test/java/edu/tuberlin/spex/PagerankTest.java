@@ -7,6 +7,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.TreeMultiset;
 import com.google.common.io.CharStreams;
 import com.google.common.io.LineProcessor;
+import com.google.common.primitives.Ints;
 import edu.tuberlin.spex.utils.CompressionHelper;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Vector;
@@ -20,27 +21,34 @@ import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Date: 11.01.2015
  * Time: 00:41
- *
  */
 public class PagerankTest {
 
+    String testData2 = "data/web-NotreDame.txt.gz";
     String testData = "data/web-BerkStan.txt.gz";
+    String testData3 = "data/web-Stanford.txt.gz";
 
     @Test
     public void testPageRank() throws Exception {
 
-        Assume.assumeTrue("Example data does not exist at " +testData, new File(testData).exists());
+        Assume.assumeTrue("Example data does not exist at " + testData, new File(testData).exists());
 
         // This is the dimension of the data - fixed to a particular dataset
-        final int MAX = 685230;
+        final int MAX = getDimension(testData);//685230;
 
         // Generate a scaled image
         final int max_scaled_size = 1000;
         final double scale = max_scaled_size / (double) MAX;
+
+        final int[][] image = new int[max_scaled_size][max_scaled_size];
+
+        // determine image matrix size - sub-sample size (1/scale)
 
         final BufferedImage bufferedImage = new BufferedImage(max_scaled_size, max_scaled_size, BufferedImage.TYPE_BYTE_BINARY);
         Graphics2D g2 = bufferedImage.createGraphics();
@@ -68,8 +76,8 @@ public class PagerankTest {
 
             @Override
             public boolean processLine(String line) throws IOException {
-                if(line.startsWith("#"))  {
-                   return true;
+                if (line.startsWith("#") || line.length() == 0) {
+                    return true;
                 }
 
                 String[] splits = line.split("\t");
@@ -77,13 +85,14 @@ public class PagerankTest {
                 int row = Integer.parseInt(splits[0]) - 1;
                 int column = Integer.parseInt(splits[1]) - 1;
 
-                int x = (int) (row  * scale);
-                int y = (int) (column  * scale);
+                int x = (int) (row * scale);
+                int y = (int) (column * scale);
 
-                bufferedImage.setRGB(x, y, Color.BLACK.getRGB());
+                image[x][y]++;
+
                 adjacency.add(row, column, 1d);
 
-                if(++counter % 100000 == 0) System.out.printf("Read %7d ...\n",counter);
+                if (++counter % 100000 == 0) System.out.printf("Read %7d edges ...\n", counter);
 
                 return true;
             }
@@ -93,6 +102,24 @@ public class PagerankTest {
                 return null;
             }
         });
+
+
+        // build picture
+        // generate submatrix
+        // slide a window
+
+
+        for (int x = 0; x < max_scaled_size; x++) {
+            for (int y = 0; y < max_scaled_size; y++) {
+                if(image[x][y] >= 7) {
+                    bufferedImage.setRGB(x, y, Color.BLACK.getRGB());
+                }
+            }
+        }
+
+
+        // bufferedImage.setRGB(x, y, Color.BLACK.getRGB());
+
 
         ImageIO.write(bufferedImage, "png", new File("adjacency.png"));
         System.out.println("Written adjacency graph file to: adjacency.png");
@@ -112,12 +139,11 @@ public class PagerankTest {
             SparseVector row = adjacency.getRow(i);
             double sum = row.norm(Vector.Norm.One);
 
-            if(sum > 0) {
+            if (sum > 0) {
                 row.scale(1. / sum);
             }
 
         }
-
 
 
         // damping
@@ -126,7 +152,6 @@ public class PagerankTest {
 
         // scale the constant term - so we can reuse it
         p0.scale(1. - c);
-
 
 
         Vector p_k;
@@ -156,13 +181,52 @@ public class PagerankTest {
         for (VectorEntry vectorEntry : p_k1) {
             long round = Math.round(Math.log(vectorEntry.get()));
             ranks.add(round);
-            if(round == 9) {
-              //  System.out.println(vectorEntry.index() + " - " + adjacency.getRow(vectorEntry.index()));
+            if (round == 9) {
+                //  System.out.println(vectorEntry.index() + " - " + adjacency.getRow(vectorEntry.index()));
             }
         }
 
         System.out.println("Rank Distribution : log normalized ranks");
         System.out.println(ranks);
 
+    }
+
+    // get Dimensions
+    private int getDimension(String filename) throws IOException {
+
+        FileInputStream fileInputStream = new FileInputStream(filename);
+        InputStream decompressionStream = CompressionHelper.getDecompressionStream(fileInputStream);
+
+        // Iterate over the lines
+        BufferedReader readable = new BufferedReader(new InputStreamReader(decompressionStream, Charsets.UTF_8));
+        int dim = CharStreams.readLines(readable, new LineProcessor<Integer>() {
+
+            Pattern pattern = Pattern.compile("#\\s+Nodes: (\\d+) Edges: (\\d+)");
+
+            int dimension = 0;
+
+            @Override
+            public boolean processLine(String line) throws IOException {
+
+                Matcher matcher = pattern.matcher(line);
+
+                if (matcher.find()) {
+                    dimension = Ints.tryParse(matcher.group(1));
+                    return false;
+                }
+
+                return true;
+
+            }
+
+            @Override
+            public Integer getResult() {
+                return dimension;
+            }
+        });
+
+        readable.close();
+
+        return dim;
     }
 }
