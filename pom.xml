@@ -30,6 +30,9 @@
         <junit.version>4.11</junit.version>
 
         <flink.version>0.7.0-incubating</flink.version>
+        <spring.boot.version>1.2.1.RELEASE</spring.boot.version>
+
+        <guava.version>14.0.1</guava.version>
 
     </properties>
 
@@ -38,18 +41,51 @@
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>com.googlecode.matrix-toolkits-java</groupId>
+            <artifactId>mtj</artifactId>
+            <version>1.0.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.github.fommil.netlib</groupId>
+            <artifactId>all</artifactId>
+            <version>1.1.2</version>
+            <type>pom</type>
+        </dependency>
+
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+        </dependency>
+
     </dependencies>
 
     <dependencyManagement>
-
         <dependencies>
-
             <dependency>
                 <groupId>junit</groupId>
                 <artifactId>junit</artifactId>
                 <version>${junit.version}</version>
                 <scope>test</scope>
             </dependency>
+
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <type>pom</type>
+                <version>${spring.boot.version}</version>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>com.google.guava</groupId>
+                <artifactId>guava</artifactId>
+                <version>${guava.version}</version>
+            </dependency>
+
         </dependencies>
     </dependencyManagement>
+
 </project>
