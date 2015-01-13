@@ -277,6 +277,7 @@ public class PagerankTest {
     private static class MatrixStatisticsCollector {
 
         long sum = 0;
+        long sum_squared = 0;
         int count = 0;
 
         private int max = Integer.MIN_VALUE;
@@ -285,10 +286,15 @@ public class PagerankTest {
         // Number of non-zeros per line
         public void addValue(int value) {
             sum+=value;
+
             count++;
 
             max = Math.max(max, value);
             min = Math.min(max, value);
+
+            // Variance counter
+            sum_squared+=value*value;
+
         }
 
         public int getMax() {
@@ -303,12 +309,20 @@ public class PagerankTest {
             return sum / (double) count;
         }
 
+        public double getStdDev() {
+            // based on http://math.stackexchange.com/questions/20593/calculate-variance-from-a-stream-of-sample-values#answer-20596
+            // sig^2 = 1 / N * [ Sum_x_i^2 + ( sum_xi ) ^2 / N  ]
+            return 1 / (double) count * ( sum_squared - ((sum * sum) / (double) count) );
+        }
+
+
         @Override
         public String toString() {
             return "MatrixStatisticsCollector{" +
                     "max=" + max +
                     ", min=" + min +
                     ", avg=" + getAvg() +
+                    ", std=" + getStdDev() +
                     '}';
         }
     }
