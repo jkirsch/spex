@@ -27,8 +27,6 @@
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm</maven.build.timestamp.format>
         <timestamp>${maven.build.timestamp}</timestamp>
 
-        <junit.version>4.11</junit.version>
-
         <flink.version>0.7.0-incubating</flink.version>
         <spring.boot.version>1.2.1.RELEASE</spring.boot.version>
 
@@ -37,10 +35,6 @@
     </properties>
 
     <dependencies>
-        <dependency>
-            <groupId>junit</groupId>
-            <artifactId>junit</artifactId>
-        </dependency>
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -75,12 +69,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>junit</groupId>
-                <artifactId>junit</artifactId>
-                <version>${junit.version}</version>
-                <scope>test</scope>
-            </dependency>
 
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -95,15 +83,6 @@
                 <artifactId>guava</artifactId>
                 <version>${guava.version}</version>
             </dependency>
-
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <type>pom</type>
-                <version>${spring.boot.version}</version>
-                <scope>import</scope>
-            </dependency>
-
 
         </dependencies>
     </dependencyManagement>
