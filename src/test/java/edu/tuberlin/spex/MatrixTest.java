@@ -91,7 +91,7 @@ public class MatrixTest {
 
             counter++;
 
-        } while (p_k1.copy().add(-1, p_k).norm(Vector.Norm.Two) > 0.001);
+        } while (p_k1.copy().add(-1, p_k).norm(Vector.Norm.Two) > 0.00001);
 
         //p_k1.scale(adjacency.numRows());
 
