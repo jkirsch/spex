@@ -31,7 +31,10 @@ public class Datasets {
         webStanford("http://snap.stanford.edu/data/web-Stanford.txt.gz"),
         youtTube("http://snap.stanford.edu/data/bigdata/communities/com-youtube.ungraph.txt.gz"),
         dblp("http://snap.stanford.edu/data/bigdata/communities/com-dblp.ungraph.txt.gz"),
-        patents("http://snap.stanford.edu/data/cit-Patents.txt.gz");
+        patents("http://snap.stanford.edu/data/cit-Patents.txt.gz"),
+        liveJournal("http://snap.stanford.edu/data/bigdata/communities/com-lj.ungraph.txt.gz");
+
+
 
 
         private String url;
