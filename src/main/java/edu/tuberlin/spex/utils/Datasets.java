@@ -65,7 +65,9 @@ public class Datasets {
 
         Stopwatch stopwatch = new Stopwatch().start();
         ReadableByteChannel rbc = Channels.newChannel(website.openStream());
-        if (!new File(targetDirectory).mkdirs()) {
+
+        File dir = new File(targetDirectory);
+        if (!dir.isDirectory() && !dir.mkdirs()) {
             LOG.error("Can't create directory at {} ", targetDirectory);
         }
         FileOutputStream fos = new FileOutputStream(new File(targetDirectory, name));

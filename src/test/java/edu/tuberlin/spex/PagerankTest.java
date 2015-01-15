@@ -18,15 +18,21 @@ import no.uib.cipr.matrix.sparse.FlexCompRowMatrix;
 import no.uib.cipr.matrix.sparse.SparseVector;
 import org.junit.Assume;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.geom.AffineTransform;
+import java.awt.image.AffineTransformOp;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -35,16 +41,30 @@ import java.util.regex.Pattern;
  * Date: 11.01.2015
  * Time: 00:41
  */
+@RunWith(Parameterized.class)
 public class PagerankTest {
 
     Logger LOG = LoggerFactory.getLogger(PagerankTest.class);
 
     Datasets datasets = new Datasets();
 
+    @Parameterized.Parameters(name = "{index}: Dataset {0}")
+    public static Collection<Datasets.GRAPHS> data() {
+        return Arrays.asList(
+                Datasets.GRAPHS.dblp,
+                Datasets.GRAPHS.patents,
+                Datasets.GRAPHS.webBerkStan,
+                Datasets.GRAPHS.webStanford,
+                Datasets.GRAPHS.webNotreDame);
+    }
+
+    @Parameterized.Parameter
+    public Datasets.GRAPHS dataset;
+
     @Test
     public void testPageRank() throws Exception {
 
-        Path path = datasets.get(Datasets.GRAPHS.webStanford);
+        Path path = datasets.get(dataset);
         Assume.assumeTrue("Example data does not exist at " + path, Files.exists(path));
 
         // This is the dimension of the data
@@ -52,6 +72,7 @@ public class PagerankTest {
 
         // Generate a scaled image
         final int max_scaled_size = 1000;
+        final double scaler = 4;
         final double scale = max_scaled_size / (double) graphInfo.MAX;
 
         final int[][] image = new int[max_scaled_size][max_scaled_size];
@@ -120,7 +141,7 @@ public class PagerankTest {
 
 
         // build picture
-        createImage(max_scaled_size, image, sparseness * max_scaled_size * max_scaled_size);
+        createImage(max_scaled_size, image, sparseness * max_scaled_size * max_scaled_size, scaler, dataset);
 
 
         // init p with = 1/n
@@ -241,7 +262,21 @@ public class PagerankTest {
         return graphInfo;
     }
 
-    private void createImage(int max_scaled_size, int[][] image, double v) throws IOException {
+    public static BufferedImage getScaledImage(BufferedImage image, int width, int height) throws IOException {
+        int imageWidth  = image.getWidth();
+        int imageHeight = image.getHeight();
+
+        double scaleX = (double)width/imageWidth;
+        double scaleY = (double)height/imageHeight;
+        AffineTransform scaleTransform = AffineTransform.getScaleInstance(scaleX, scaleY);
+        AffineTransformOp bilinearScaleOp = new AffineTransformOp(scaleTransform, AffineTransformOp.TYPE_BILINEAR);
+
+        return bilinearScaleOp.filter(
+                image,
+                new BufferedImage(width, height, image.getType()));
+    }
+
+    private void createImage(int max_scaled_size, int[][] image, double v, double scaler, Datasets.GRAPHS dataset) throws IOException {
 
         final BufferedImage bufferedImage = new BufferedImage(max_scaled_size, max_scaled_size, BufferedImage.TYPE_BYTE_BINARY);
         Graphics2D g2 = bufferedImage.createGraphics();
@@ -251,7 +286,7 @@ public class PagerankTest {
         for (int x = 0; x < max_scaled_size; x++) {
             for (int y = 0; y < max_scaled_size; y++) {
                 //Math.max(max_scaled_size*3, v / 4)
-                if (image[x][y] >= Math.max(1, v / 4)) {
+                if (image[x][y] >= Math.max(1, v / scaler)) {
                     bufferedImage.setRGB(x, y, Color.BLACK.getRGB());
                 }
             }
@@ -259,9 +294,12 @@ public class PagerankTest {
 
         // bufferedImage.setRGB(x, y, Color.BLACK.getRGB());
 
+        File images = new File("images");
+        images.mkdir();
 
-        ImageIO.write(bufferedImage, "png", new File("adjacency.png"));
-        LOG.info("Written adjacency graph file to: adjacency.png");
+        ImageIO.write(bufferedImage, "png", new File(images, dataset.name() + "-adjacency.png"));
+        ImageIO.write(getScaledImage(bufferedImage, 100, 100), "png", new File(images, dataset.name() + "-adjacency-small.png"));
+                LOG.info("Written adjacency graph file to: adjacency.png");
     }
 
     private static class GraphInfo {
