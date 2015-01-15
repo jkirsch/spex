@@ -34,9 +34,6 @@ public class Datasets {
         patents("http://snap.stanford.edu/data/cit-Patents.txt.gz"),
         liveJournal("http://snap.stanford.edu/data/bigdata/communities/com-lj.ungraph.txt.gz");
 
-
-
-
         private String url;
 
         GRAPHS(String url) {
@@ -54,7 +51,9 @@ public class Datasets {
         String filename = Joiner.on(".").join(name, extension);
 
         Path path = Paths.get(targetDirectory, filename);
-        if(!Files.exists(path)) {
+        if(Files.exists(path)) {
+            LOG.info("Using cached copy at {}", location);
+        } else {
             download(filename, location);
         }
         return path;
@@ -66,7 +65,9 @@ public class Datasets {
 
         Stopwatch stopwatch = new Stopwatch().start();
         ReadableByteChannel rbc = Channels.newChannel(website.openStream());
-        new File(targetDirectory).mkdir();
+        if (!new File(targetDirectory).mkdirs()) {
+            LOG.error("Can't create directory at {} ", targetDirectory);
+        }
         FileOutputStream fos = new FileOutputStream(new File(targetDirectory, name));
         fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
 
