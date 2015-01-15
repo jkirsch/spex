@@ -1,7 +1,6 @@
 package edu.tuberlin.spex;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Stopwatch;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Ordering;
@@ -9,13 +8,12 @@ import com.google.common.collect.TreeMultiset;
 import com.google.common.io.CharStreams;
 import com.google.common.io.LineProcessor;
 import com.google.common.primitives.Ints;
+import edu.tuberlin.spex.algorithms.PageRank;
 import edu.tuberlin.spex.utils.CompressionHelper;
 import edu.tuberlin.spex.utils.Datasets;
-import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Vector;
 import no.uib.cipr.matrix.VectorEntry;
-import no.uib.cipr.matrix.sparse.FlexCompRowMatrix;
-import no.uib.cipr.matrix.sparse.SparseVector;
+import no.uib.cipr.matrix.sparse.*;
 import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -52,7 +50,6 @@ public class PagerankTest {
     public static Collection<Datasets.GRAPHS> data() {
         return Arrays.asList(
                 Datasets.GRAPHS.dblp,
-                Datasets.GRAPHS.patents,
                 Datasets.GRAPHS.webBerkStan,
                 Datasets.GRAPHS.webStanford,
                 Datasets.GRAPHS.webNotreDame);
@@ -78,7 +75,7 @@ public class PagerankTest {
         final int[][] image = new int[max_scaled_size][max_scaled_size];
         final Map<Integer, Integer> nodeIdMapping = Maps.newHashMapWithExpectedSize(graphInfo.MAX);
 
-        final FlexCompRowMatrix adjacency = new FlexCompRowMatrix(graphInfo.MAX, graphInfo.MAX);
+        final FlexCompRowMatrix read = new FlexCompRowMatrix(graphInfo.MAX, graphInfo.MAX);
 
         FileInputStream fileInputStream = new FileInputStream(path.toFile());
         InputStream decompressionStream = CompressionHelper.getDecompressionStream(fileInputStream);
@@ -117,11 +114,11 @@ public class PagerankTest {
 
                 if ((row < graphInfo.MAX) && (column < graphInfo.MAX)) {
                     image[x][y]++;
-                    adjacency.add(row, column, 1d);
+                    read.add(row, column, 1d);
 
                     if (!graphInfo.directed) {
                         image[y][x]++;
-                        adjacency.add(column, row, 1d);
+                        read.add(column, row, 1d);
                     }
 
                     if (++counter % 100000 == 0) LOG.info("Read {} edges ...", counter);
@@ -143,21 +140,12 @@ public class PagerankTest {
         // build picture
         createImage(max_scaled_size, image, sparseness * max_scaled_size * max_scaled_size, scaler, dataset);
 
-
-        // init p with = 1/n
-        Vector p0 = new DenseVector(adjacency.numRows());
-        for (VectorEntry vectorEntry : p0) {
-            vectorEntry.set(1. / (double) graphInfo.MAX);
-        }
-
-        Stopwatch stopwatch = new Stopwatch().start();
-
         MatrixStatisticsCollector matrixStatisticsCollector = new MatrixStatisticsCollector();
 
         // divide by column sum
-        for (int i = 0; i < adjacency.numRows(); i++) {
+        for (int i = 0; i < read.numRows(); i++) {
 
-            SparseVector row = adjacency.getRow(i);
+            SparseVector row = read.getRow(i);
             double sum = row.norm(Vector.Norm.One);
 
             if (sum > 0) {
@@ -170,33 +158,14 @@ public class PagerankTest {
         LOG.info(matrixStatisticsCollector.toString());
 
 
-        // damping
+        //FlexCompColMatrix adjacency = new FlexCompColMatrix(read);
 
-        double c = 0.85d;
+        PageRank pageRank = new PageRank(0.85);
 
-        // scale the constant term - so we can reuse it
-        p0.scale(1. - c);
-
-
-        Vector p_k;
-        Vector p_k1 = new DenseVector(p0);
-
-        int counter = 0;
-
-        // iterate
-        // P_k+1 = c * AT * p_k + p_0
-
-        do {
-            p_k = p_k1.copy();
-            p_k1 = adjacency.transMultAdd(c, p_k, p0.copy());
-
-            counter++;
-
-        } while (p_k1.copy().add(-1, p_k).norm(Vector.Norm.Two) > 0.0000001);
-
-        stopwatch.stop();
-
-        LOG.info("Converged after {} : {} in {}", counter, p_k1.norm(Vector.Norm.One), stopwatch);
+        Vector p_k1 = pageRank.calc(new FlexCompColMatrix(read));
+        p_k1 = pageRank.calc(new FlexCompRowMatrix(read));
+        p_k1 = pageRank.calc(new CompRowMatrix(read));
+        p_k1 = pageRank.calc(new CompColMatrix(read));
 
         Multiset<Long> ranks = TreeMultiset.create(Ordering.natural());
 

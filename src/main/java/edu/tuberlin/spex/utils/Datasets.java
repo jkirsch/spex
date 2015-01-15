@@ -52,7 +52,7 @@ public class Datasets {
 
         Path path = Paths.get(targetDirectory, filename);
         if(Files.exists(path)) {
-            LOG.info("Using cached copy at {}", location);
+            LOG.info("Using cached copy for {}", location);
         } else {
             download(filename, location);
         }
