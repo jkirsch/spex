@@ -1,10 +1,14 @@
 package edu.tuberlin.spex;
 
+import edu.tuberlin.spex.algorithms.PageRank;
+import edu.tuberlin.spex.algorithms.Reordering;
 import no.uib.cipr.matrix.*;
-import no.uib.cipr.matrix.sparse.CompDiagMatrix;
 import no.uib.cipr.matrix.sparse.FlexCompRowMatrix;
 import no.uib.cipr.matrix.sparse.SparseVector;
+import org.junit.Assert;
 import org.junit.Test;
+
+import static org.hamcrest.Matchers.closeTo;
 
 /**
  * Date: 09.01.2015
@@ -38,66 +42,121 @@ public class MatrixTest {
     @Test
     public void testPageRank() throws Exception {
 
-        FlexCompRowMatrix adjacency = new FlexCompRowMatrix(5, 5);
+        FlexCompRowMatrix adjacency = new FlexCompRowMatrix(6, 6);
 
+        // example graph
+        // http://www.ccs.northeastern.edu/home/daikeshi/notes/PageRank.pdf
+        // A=0, B=1, C=2, D=3, E=4, F=5
+        // A -> B, A -> C, A -> F
         adjacency.set(0, 1, 1);
-        adjacency.set(0, 2, 1);
-        adjacency.set(1, 3, 1);
-        adjacency.set(2, 3, 1);
-        adjacency.set(2, 4, 1);
-        adjacency.set(3, 4, 1);
-        adjacency.set(4, 0, 1);
+        adjacency.add(0, 2, 1);
+        adjacency.add(0, 5, 1);
+        // B -> C, B -> D, B -> E, B -> F
+        adjacency.add(1, 2, 1);
+        adjacency.add(1, 3, 1);
+        adjacency.add(1, 4, 1);
+        adjacency.add(1, 5, 1);
+        // C -> D, C -> E
+        adjacency.add(2, 3, 1);
+        adjacency.add(2, 4, 1);
+        // D -> A, D -> C, D -> E, D -> F
+        adjacency.add(3, 0, 1);
+        adjacency.add(3, 2, 1);
+        adjacency.add(3, 4, 1);
+        adjacency.add(3, 5, 1);
+        // E -> A
+        adjacency.add(4, 0, 1);
+        // F -> A, F -> B, F -> E
+        adjacency.add(5, 0, 1);
+        adjacency.add(5, 1, 1);
+        adjacency.add(5, 4, 1);
 
-        Matrix k = new CompDiagMatrix(5, 5);
 
         // divide by column sum
         for (int i = 0; i < adjacency.numRows(); i++) {
 
-
             SparseVector row = adjacency.getRow(i);
             double sum = row.norm(Vector.Norm.One);
 
-            if(sum > 0) {
+            if (sum > 0) {
                 row.scale(1. / sum);
-                k.set(i, i, 1. / sum);
             }
+
         }
 
-        Vector p0 = new DenseVector(adjacency.numRows());
-        for (VectorEntry vectorEntry : p0) {
-            vectorEntry.set(1 / (double) adjacency.numColumns());
+        PageRank pageRank = new PageRank(0.85);
+
+        Vector p_k1 = pageRank.calc(adjacency);
+
+        System.out.println(new DenseMatrix(adjacency));
+        for (VectorEntry vectorEntry : p_k1) {
+            System.out.printf("\t %2d %1.3f\n", vectorEntry.index(), vectorEntry.get());
         }
+        System.out.println(p_k1.norm(Vector.Norm.One));
+    }
+
+    @Test
+    public void testPageRankDangling() throws Exception {
+
+        FlexCompRowMatrix adjacency = new FlexCompRowMatrix(3, 3);
+
+        adjacency.set(0, 2, 1);
+        adjacency.set(1, 2, 1);
+        adjacency.set(2, 2, 1);
 
 
-        // out degree per node
+        PageRank pageRank = new PageRank(0.85);
 
-        double c = 0.85d;
+        Matrix normalized = PageRank.normalizeColumnWise(new DenseMatrix(adjacency));
 
-        System.out.println(p0);
-        p0.scale(1 - c);
+        System.out.println(normalized);
 
-        System.out.println(p0);
+        Vector normal = pageRank.calc(normalized);
+        Vector reordered = pageRank.calc(PageRank.normalizeColumnWise(Reordering.orderByRowSum(adjacency)));
 
-        // loop
-
-        Vector p_k;
-        Vector p_k1 = new DenseVector(p0);
-
-        int counter = 0;
-
-        do {
-            p_k = p_k1.copy();
-            p_k1 = adjacency.transMultAdd(c, p_k, p0.copy());
-
-            counter++;
-
-        } while (p_k1.copy().add(-1, p_k).norm(Vector.Norm.Two) > 0.00001);
-
-        //p_k1.scale(adjacency.numRows());
-
-        System.out.println("Converged after " + counter + " : " + p_k1.norm(Vector.Norm.One));
-
-        System.out.println(p_k1);
+        Assert.assertThat(reordered.norm(Vector.Norm.One), closeTo(normal.norm(Vector.Norm.One), 0.0000001));
 
     }
+
+    @Test
+    public void testReorder() throws Exception {
+
+        Matrix adjacency = new DenseMatrix(3, 3);
+
+        adjacency.set(0, 0, 1);
+        adjacency.set(0, 1, 2);
+        adjacency.set(0, 2, 3);
+
+        adjacency.set(1, 0, 4);
+        adjacency.set(1, 1, 5);
+        adjacency.set(1, 2, 6);
+
+        adjacency.set(2, 0, 7);
+        adjacency.set(2, 1, 8);
+        adjacency.set(2, 2, 9);
+
+        System.out.println(adjacency);
+
+        PermutationMatrix permutationMatrix = new PermutationMatrix(new int[] {0, 2, 1});
+
+        System.out.println(permutationMatrix);
+
+        // re-order row wise
+        System.out.println(permutationMatrix.mult(adjacency, new DenseMatrix(adjacency)));
+
+        // reorder column wise
+        Matrix columnWise = adjacency.mult(permutationMatrix, new DenseMatrix(adjacency));
+        System.out.println(columnWise);
+
+        System.out.println(PageRank.normalizeColumnWise(columnWise));
+
+        PageRank pageRank = new PageRank(0.85);
+        pageRank.calc(PageRank.normalizeColumnWise(adjacency));
+
+        pageRank.calc(PageRank.normalizeColumnWise(columnWise));
+
+
+
+    }
+
 }

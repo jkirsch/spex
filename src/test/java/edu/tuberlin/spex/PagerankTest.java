@@ -1,19 +1,20 @@
 package edu.tuberlin.spex;
 
 import com.google.common.base.Charsets;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Multiset;
-import com.google.common.collect.Ordering;
-import com.google.common.collect.TreeMultiset;
+import com.google.common.base.Function;
+import com.google.common.collect.*;
 import com.google.common.io.CharStreams;
 import com.google.common.io.LineProcessor;
 import com.google.common.primitives.Ints;
 import edu.tuberlin.spex.algorithms.PageRank;
+import edu.tuberlin.spex.algorithms.Reordering;
 import edu.tuberlin.spex.utils.CompressionHelper;
 import edu.tuberlin.spex.utils.Datasets;
+import no.uib.cipr.matrix.*;
 import no.uib.cipr.matrix.Vector;
-import no.uib.cipr.matrix.VectorEntry;
 import no.uib.cipr.matrix.sparse.*;
+import org.apache.commons.math3.random.EmpiricalDistribution;
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -29,9 +30,9 @@ import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.*;
 import java.util.Arrays;
-import java.util.Collection;
-import java.util.Map;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -52,7 +53,11 @@ public class PagerankTest {
                 Datasets.GRAPHS.dblp,
                 Datasets.GRAPHS.webBerkStan,
                 Datasets.GRAPHS.webStanford,
-                Datasets.GRAPHS.webNotreDame);
+                Datasets.GRAPHS.webNotreDame,
+                Datasets.GRAPHS.patents,
+                Datasets.GRAPHS.youtTube,
+                Datasets.GRAPHS.liveJournal
+             );
     }
 
     @Parameterized.Parameter
@@ -69,13 +74,10 @@ public class PagerankTest {
 
         // Generate a scaled image
         final int max_scaled_size = 1000;
-        final double scaler = 4;
-        final double scale = max_scaled_size / (double) graphInfo.MAX;
 
-        final int[][] image = new int[max_scaled_size][max_scaled_size];
         final Map<Integer, Integer> nodeIdMapping = Maps.newHashMapWithExpectedSize(graphInfo.MAX);
 
-        final FlexCompRowMatrix read = new FlexCompRowMatrix(graphInfo.MAX, graphInfo.MAX);
+        final FlexCompRowMatrix readAdjacency = new FlexCompRowMatrix(graphInfo.MAX, graphInfo.MAX);
 
         FileInputStream fileInputStream = new FileInputStream(path.toFile());
         InputStream decompressionStream = CompressionHelper.getDecompressionStream(fileInputStream);
@@ -109,16 +111,11 @@ public class PagerankTest {
                 int row = nodeIdMapping.get(fromNode);
                 int column = nodeIdMapping.get(toNode);
 
-                int x = (int) (row * scale);
-                int y = (int) (column * scale);
-
                 if ((row < graphInfo.MAX) && (column < graphInfo.MAX)) {
-                    image[x][y]++;
-                    read.add(row, column, 1d);
+                    readAdjacency.add(row, column, 1d);
 
                     if (!graphInfo.directed) {
-                        image[y][x]++;
-                        read.add(column, row, 1d);
+                        readAdjacency.add(column, row, 1d);
                     }
 
                     if (++counter % 100000 == 0) LOG.info("Read {} edges ...", counter);
@@ -134,22 +131,41 @@ public class PagerankTest {
         });
 
         double sparseness = Math.exp(Math.log(counts + (!graphInfo.directed ? counts : 0)) - 2 * Math.log(graphInfo.MAX)); // count / max^2
+        LOG.info(graphInfo.toString());
         LOG.info("Counted Nodes {}, Read {} edges ... directed={}, sparseness = {}, sparseness estimate = {}", nodeIdMapping.size(), counts, graphInfo.directed, sparseness, sparseness * max_scaled_size * max_scaled_size);
 
 
         // build picture
-        createImage(max_scaled_size, image, sparseness * max_scaled_size * max_scaled_size, scaler, dataset);
+        createImage(readAdjacency, dataset, max_scaled_size, "normal");
+
+        Matrix orderByRowSumMatrix = Reordering.orderByRowSum(readAdjacency);
+
+        // build picture
+        createImage(orderByRowSumMatrix, dataset, max_scaled_size, "sortedByRow");
+
+        Matrix orderByColumnSumMatrix = Reordering.orderByColumnSum(readAdjacency);
+        createImage(orderByColumnSumMatrix, dataset, max_scaled_size, "sortedByColumn");
+
+        calcPageRank(graphInfo, readAdjacency);
+        calcPageRank(graphInfo, new FlexCompRowMatrix(orderByRowSumMatrix));
+        calcPageRank(graphInfo, new FlexCompRowMatrix(orderByColumnSumMatrix));
+
+    }
+
+    private void calcPageRank(GraphInfo graphInfo, FlexCompRowMatrix cols) {
 
         MatrixStatisticsCollector matrixStatisticsCollector = new MatrixStatisticsCollector();
 
         // divide by column sum
-        for (int i = 0; i < read.numRows(); i++) {
+        for (int i = 0; i < cols.numRows(); i++) {
 
-            SparseVector row = read.getRow(i);
+            SparseVector row = cols.getRow(i);
             double sum = row.norm(Vector.Norm.One);
 
             if (sum > 0) {
                 row.scale(1. / sum);
+            } else {
+                // row.set(p0.copy());
             }
 
             matrixStatisticsCollector.addValue(row.getUsed());
@@ -157,18 +173,17 @@ public class PagerankTest {
 
         LOG.info(matrixStatisticsCollector.toString());
 
-
-        //FlexCompColMatrix adjacency = new FlexCompColMatrix(read);
-
         PageRank pageRank = new PageRank(0.85);
 
-        Vector p_k1 = pageRank.calc(new FlexCompColMatrix(read));
-        p_k1 = pageRank.calc(new FlexCompRowMatrix(read));
-        p_k1 = pageRank.calc(new CompRowMatrix(read));
-        p_k1 = pageRank.calc(new CompColMatrix(read));
+        Vector p_k1 = pageRank.calc(new FlexCompColMatrix(cols));
+        p_k1 = pageRank.calc(cols);
+        p_k1 = pageRank.calc(new CompRowMatrix(cols));
+        p_k1 = pageRank.calc(new CompColMatrix(cols));
+
 
         Multiset<Long> ranks = TreeMultiset.create(Ordering.natural());
 
+        p_k1.scale(1. / p_k1.norm(Vector.Norm.One));
         p_k1.scale(graphInfo.MAX);
 
         for (VectorEntry vectorEntry : p_k1) {
@@ -178,7 +193,6 @@ public class PagerankTest {
 
         LOG.info("Rank Distribution : log normalized ranks");
         LOG.info(ranks.toString());
-
     }
 
     // get Dimensions
@@ -203,7 +217,9 @@ public class PagerankTest {
 
                 Matcher sizeLineMatches = size.matcher(line);
                 Matcher graphType = type.matcher(line);
-                LOG.info(line);
+                if (line.startsWith("#")) {
+                    LOG.info(line);
+                }
 
                 if (graphType.find()) {
                     if (graphType.group(1).equalsIgnoreCase("Directed")) {
@@ -235,40 +251,105 @@ public class PagerankTest {
         int imageWidth  = image.getWidth();
         int imageHeight = image.getHeight();
 
-        double scaleX = (double)width/imageWidth;
-        double scaleY = (double)height/imageHeight;
+        double scaleX = (double) width / imageWidth;
+        double scaleY = (double) height / imageHeight;
         AffineTransform scaleTransform = AffineTransform.getScaleInstance(scaleX, scaleY);
-        AffineTransformOp bilinearScaleOp = new AffineTransformOp(scaleTransform, AffineTransformOp.TYPE_BILINEAR);
+        AffineTransformOp bilinearScaleOp = new AffineTransformOp(scaleTransform, AffineTransformOp.TYPE_BICUBIC);
 
         return bilinearScaleOp.filter(
                 image,
                 new BufferedImage(width, height, image.getType()));
     }
 
-    private void createImage(int max_scaled_size, int[][] image, double v, double scaler, Datasets.GRAPHS dataset) throws IOException {
+    private void createImage(final Matrix adjacency, Datasets.GRAPHS dataset, int max_scaled_size, String name) throws IOException {
 
-        final BufferedImage bufferedImage = new BufferedImage(max_scaled_size, max_scaled_size, BufferedImage.TYPE_BYTE_BINARY);
+        final BufferedImage bufferedImage = new BufferedImage(max_scaled_size, max_scaled_size, BufferedImage.TYPE_3BYTE_BGR);
         Graphics2D g2 = bufferedImage.createGraphics();
         g2.setColor(Color.WHITE);
         g2.fillRect(0, 0, max_scaled_size, max_scaled_size);
 
-        for (int x = 0; x < max_scaled_size; x++) {
-            for (int y = 0; y < max_scaled_size; y++) {
-                //Math.max(max_scaled_size*3, v / 4)
-                if (image[x][y] >= Math.max(1, v / scaler)) {
-                    bufferedImage.setRGB(x, y, Color.BLACK.getRGB());
+        // Downsample
+        final DenseMatrix downSample = new DenseMatrix(max_scaled_size, max_scaled_size);
+
+        int counter = 0;
+        final double scale = max_scaled_size / (double) adjacency.numColumns();
+
+        for (MatrixEntry matrixEntry : adjacency) {
+            int x = (int) (matrixEntry.column() * scale);
+            int y = (int) (matrixEntry.row() * scale);
+            downSample.set(x, y, downSample.get(x, y) + 1);
+            counter++;
+        }
+
+        EmpiricalDistribution empiricalDistribution = new EmpiricalDistribution(counter / 10);
+        empiricalDistribution.load(downSample.getData());
+
+        List<SummaryStatistics> binStats = empiricalDistribution.getBinStats();
+
+        // sort in the order of least elements start painting in reverse order
+
+        ArrayList<MyPoint> matrixEntries = Lists.newArrayList(Iterables.transform(downSample, new Function<MatrixEntry, MyPoint>() {
+            @Override
+            public MyPoint apply(MatrixEntry input) {
+                // transform
+                return new MyPoint(input.column(), input.row(), input.get());
+            }
+        }));
+        Collections.sort(matrixEntries, Ordering.natural().onResultOf(new Function<MyPoint, Comparable>() {
+            @Override
+            public Comparable apply(MyPoint input) {
+                return input.getValue();
+            }
+        }));
+
+        for (MyPoint matrixEntry : matrixEntries) {
+
+            final double value = matrixEntry.getValue();
+            // which bin
+            int bin = 0;
+            for (SummaryStatistics binStat : binStats) {
+                if (value >= binStat.getMin() && value <= binStat.getMax()) {
+                    break;
                 }
+                bin++;
+            }
+
+            int i = bin; //(int) ((colors.length / (double) empiricalDistribution.getBinCount()) * bin);
+
+            Color color1 = Color.blue.brighter();
+            Color color2 = Color.blue.darker();
+
+            if (i >= 1) {
+                int size = 10;// + i;
+
+                double ratio = bin / (double) empiricalDistribution.getBinCount();
+
+                int red = (int) (color2.getRed() * ratio + color1.getRed() * (1 - ratio));
+                int green = (int) (color2.getGreen() * ratio + color1.getGreen() * (1 - ratio));
+                int blue = (int) (color2.getBlue() * ratio + color1.getBlue() * (1 - ratio));
+                Color stepColor = new Color(red, green, blue);
+
+                //255 - ((int) ((10 / maxValue) * value) + 155);
+                //Color color = new Color(colorValue, colorValue, colorValue);
+                g2.setColor(stepColor);
+                int x = matrixEntry.getX();
+                int y = matrixEntry.getY();
+                //g2.fillOval(x - 5, y - 5, size, size);
+                bufferedImage.setRGB(x, y, stepColor.getRGB());
+                //}
             }
         }
+
 
         // bufferedImage.setRGB(x, y, Color.BLACK.getRGB());
 
         File images = new File("images");
         images.mkdir();
 
-        ImageIO.write(bufferedImage, "png", new File(images, dataset.name() + "-adjacency.png"));
-        ImageIO.write(getScaledImage(bufferedImage, 100, 100), "png", new File(images, dataset.name() + "-adjacency-small.png"));
-                LOG.info("Written adjacency graph file to: adjacency.png");
+        String prefix = dataset.name() + "-" + name;
+        ImageIO.write(bufferedImage, "png", new File(images, prefix + "-adjacency.png"));
+        ImageIO.write(getScaledImage(bufferedImage, 100, 100), "png", new File(images, prefix + "-adjacency-small.png"));
+        LOG.info("Written adjacency graph file to: adjacency.png");
     }
 
     private static class GraphInfo {
@@ -278,6 +359,38 @@ public class PagerankTest {
         public GraphInfo(int MAX, boolean directed) {
             this.MAX = MAX;
             this.directed = directed;
+        }
+
+        @Override
+        public String toString() {
+            return "GraphInfo{" +
+                    "MAX=" + MAX +
+                    ", directed=" + directed +
+                    '}';
+        }
+    }
+
+    private static class MyPoint {
+        int x;
+        int y;
+        double value;
+
+        public MyPoint(int x, int y, double value) {
+            this.x = x;
+            this.y = y;
+            this.value = value;
+        }
+
+        public int getX() {
+            return x;
+        }
+
+        public int getY() {
+            return y;
+        }
+
+        public double getValue() {
+            return value;
         }
     }
 
@@ -292,7 +405,7 @@ public class PagerankTest {
 
         // Number of non-zeros per line
         public void addValue(int value) {
-            sum+=value;
+            sum += value;
 
             count++;
 
@@ -300,7 +413,7 @@ public class PagerankTest {
             min = Math.min(max, value);
 
             // Variance counter
-            sum_squared+=value*value;
+            sum_squared += value * value;
 
         }
 
@@ -319,7 +432,7 @@ public class PagerankTest {
         public double getStdDev() {
             // based on http://math.stackexchange.com/questions/20593/calculate-variance-from-a-stream-of-sample-values#answer-20596
             // sig^2 = 1 / N * [ Sum_x_i^2 + ( sum_xi ) ^2 / N  ]
-            return 1 / (double) count * ( sum_squared - ((sum * sum) / (double) count) );
+            return 1 / (double) count * (sum_squared - ((sum * sum) / (double) count));
         }
 
 
@@ -333,4 +446,67 @@ public class PagerankTest {
                     '}';
         }
     }
+
+    private class Position {
+        int column;
+        int nnz;
+
+        public Position(int column, int nnz) {
+            this.column = column;
+            this.nnz = nnz;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Position position = (Position) o;
+
+            if (column != position.column) return false;
+            if (nnz != position.nnz) return false;
+
+            return true;
+        }
+
+        @Override
+        public int hashCode() {
+            int result = column;
+            result = 31 * result + nnz;
+            return result;
+        }
+    }
+
+    private class Index {
+        final int index;
+        final double value;
+
+        public Index(int index, double value) {
+            this.index = index;
+            this.value = value;
+        }
+
+        public int getIndex() {
+            return index;
+        }
+
+        public double getValue() {
+            return value;
+        }
+    }
+
+
+    Ordering<Index> vectorEntryOrdering = Ordering.natural().onResultOf(new Function<Index, Comparable>() {
+        @Override
+        public Comparable apply(Index input) {
+            return input.getValue();
+        }
+    });
+
+    Function<VectorEntry, Index> function = new Function<VectorEntry, Index>() {
+        @Override
+        public Index apply(VectorEntry input) {
+            return new Index(input.index(), input.get());
+        }
+    };
 }
