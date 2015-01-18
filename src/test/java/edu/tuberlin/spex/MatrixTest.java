@@ -104,6 +104,7 @@ public class MatrixTest {
         adjacency.set(1, 1, 2);
         adjacency.set(2, 2, 3);
         adjacency.set(3, 3, 4);
+        adjacency.set(3, 1, 4);
 
 
         PageRank pageRank = new PageRank(0.85);
@@ -118,6 +119,10 @@ public class MatrixTest {
         Vector reordered = pageRank.calc(PageRank.normalizeColumnWise(Reordering.orderByRowSum(adjacency)));
 
         Assert.assertThat(reordered.norm(Vector.Norm.One), closeTo(normal.norm(Vector.Norm.One), 0.0000001));
+
+        System.out.println(adjacency.norm(Matrix.Norm.Frobenius));
+        System.out.println(Reordering.orderByRowSum(adjacency).norm(Matrix.Norm.Frobenius));
+        System.out.println(Reordering.orderByRowSum(adjacency).norm(Matrix.Norm.Frobenius));
     }
 
     @Test

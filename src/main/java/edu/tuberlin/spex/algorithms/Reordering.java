@@ -37,17 +37,18 @@ public class Reordering {
 
         int counter = 0;
         for (Index index : sortedByRow) {
+            // element[counter] should now be at new Index
             int newIndex = index.getIndex();
-            if(counter != newIndex && counter != positions[newIndex]) {
+            if(counter != positions[newIndex]) {
                 // reorder in place by swapping
                 SparseVector original = rowMatrix.getRow(counter);
-                SparseVector newRow = rowMatrix.getRow(index.getIndex());
+                SparseVector newRow = rowMatrix.getRow(positions[newIndex]);
                 rowMatrix.setRow(counter, newRow);
-                rowMatrix.setRow(index.getIndex(), original);
+                rowMatrix.setRow(positions[newIndex], original);
 
                 // remember that we swapped
                 int oldValue = positions[newIndex];
-                positions[newIndex] = counter;
+                positions[newIndex] = positions[counter];
                 positions[counter] = oldValue;
             }
             counter++;
@@ -75,12 +76,12 @@ public class Reordering {
         int counter = 0;
         for (Index index : sortedByRow) {
             int newIndex = index.getIndex();
-            if(counter != newIndex && counter != positions[newIndex]) {
+            if(counter != positions[newIndex]) {
                 // reorder in place by swapping
-                SparseVector original = columnMatrix.getColumn(positions[counter]);
+                SparseVector original = columnMatrix.getColumn(counter);
                 SparseVector newColumn = columnMatrix.getColumn(positions[newIndex]);
                 columnMatrix.setColumn(counter, newColumn);
-                columnMatrix.setColumn(newIndex, original);
+                columnMatrix.setColumn(positions[newIndex], original);
 
                 // remember that we swapped
                 int oldValue = positions[newIndex];

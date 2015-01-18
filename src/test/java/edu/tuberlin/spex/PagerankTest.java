@@ -15,6 +15,7 @@ import no.uib.cipr.matrix.Vector;
 import no.uib.cipr.matrix.sparse.*;
 import org.apache.commons.math3.random.EmpiricalDistribution;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,6 +36,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static org.hamcrest.core.Is.is;
 
 /**
  * Date: 11.01.2015
@@ -139,15 +142,19 @@ public class PagerankTest {
         createImage(readAdjacency, dataset, max_scaled_size, "normal");
 
         Matrix orderByRowSumMatrix = Reordering.orderByRowSum(readAdjacency);
+        Matrix orderByColumnSumMatrix = Reordering.orderByColumnSum(readAdjacency);
+
+        // check that we are not distorting the matrix
+        Assert.assertThat(orderByRowSumMatrix.norm(Matrix.Norm.Frobenius), is(readAdjacency.norm(Matrix.Norm.Frobenius)));
+        Assert.assertThat(orderByColumnSumMatrix.norm(Matrix.Norm.Frobenius), is(readAdjacency.norm(Matrix.Norm.Frobenius)));
 
         // build picture
         createImage(orderByRowSumMatrix, dataset, max_scaled_size, "sortedByRow");
 
-        Matrix orderByColumnSumMatrix = Reordering.orderByColumnSum(readAdjacency);
         createImage(orderByColumnSumMatrix, dataset, max_scaled_size, "sortedByColumn");
 
-        calcPageRank(graphInfo, readAdjacency);
-        calcPageRank(graphInfo, new FlexCompRowMatrix(orderByColumnSumMatrix));
+       // calcPageRank(graphInfo, readAdjacency);
+       // calcPageRank(graphInfo, new FlexCompRowMatrix(orderByColumnSumMatrix));
 
     }
 
@@ -347,7 +354,7 @@ public class PagerankTest {
 
         String prefix = dataset.name() + "-" + name;
         ImageIO.write(bufferedImage, "png", new File(images, prefix + "-adjacency.png"));
-        ImageIO.write(getScaledImage(bufferedImage, 100, 100), "png", new File(images, prefix + "-adjacency-small.png"));
+       // ImageIO.write(getScaledImage(bufferedImage, 100, 100), "png", new File(images, prefix + "-adjacency-small.png"));
         LOG.info("Written adjacency graph file to: adjacency.png");
     }
 
