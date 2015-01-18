@@ -147,7 +147,6 @@ public class PagerankTest {
         createImage(orderByColumnSumMatrix, dataset, max_scaled_size, "sortedByColumn");
 
         calcPageRank(graphInfo, readAdjacency);
-        calcPageRank(graphInfo, new FlexCompRowMatrix(orderByRowSumMatrix));
         calcPageRank(graphInfo, new FlexCompRowMatrix(orderByColumnSumMatrix));
 
     }
@@ -447,66 +446,6 @@ public class PagerankTest {
         }
     }
 
-    private class Position {
-        int column;
-        int nnz;
-
-        public Position(int column, int nnz) {
-            this.column = column;
-            this.nnz = nnz;
-        }
-
-        @Override
-        public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
-
-            Position position = (Position) o;
-
-            if (column != position.column) return false;
-            if (nnz != position.nnz) return false;
-
-            return true;
-        }
-
-        @Override
-        public int hashCode() {
-            int result = column;
-            result = 31 * result + nnz;
-            return result;
-        }
-    }
-
-    private class Index {
-        final int index;
-        final double value;
-
-        public Index(int index, double value) {
-            this.index = index;
-            this.value = value;
-        }
-
-        public int getIndex() {
-            return index;
-        }
-
-        public double getValue() {
-            return value;
-        }
-    }
 
 
-    Ordering<Index> vectorEntryOrdering = Ordering.natural().onResultOf(new Function<Index, Comparable>() {
-        @Override
-        public Comparable apply(Index input) {
-            return input.getValue();
-        }
-    });
-
-    Function<VectorEntry, Index> function = new Function<VectorEntry, Index>() {
-        @Override
-        public Index apply(VectorEntry input) {
-            return new Index(input.index(), input.get());
-        }
-    };
 }
