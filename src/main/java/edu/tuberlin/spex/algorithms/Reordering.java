@@ -25,20 +25,30 @@ public class Reordering {
         DenseVector IDENTITY_VECTOR = VectorHelper.ones(matrix.numColumns());
 
         Vector rowSums = matrix.mult(IDENTITY_VECTOR, new DenseVector(matrix.numColumns()));
-        Vector colSums = matrix.transMult(IDENTITY_VECTOR, new DenseVector(matrix.numColumns()));
 
         List<Index> sortedByRow = vectorEntryOrdering.sortedCopy(Iterables.transform(rowSums, function));
 
         FlexCompRowMatrix rowMatrix = new FlexCompRowMatrix(matrix);
 
+        int[] positions = new int[matrix.numColumns()];
+        for (int i = 0; i < positions.length; i++) {
+            positions[i] = i;
+        }
+
         int counter = 0;
         for (Index index : sortedByRow) {
-            if(counter != index.getIndex()) {
+            int newIndex = index.getIndex();
+            if(counter != newIndex && counter != positions[newIndex]) {
                 // reorder in place by swapping
                 SparseVector original = rowMatrix.getRow(counter);
                 SparseVector newRow = rowMatrix.getRow(index.getIndex());
                 rowMatrix.setRow(counter, newRow);
                 rowMatrix.setRow(index.getIndex(), original);
+
+                // remember that we swapped
+                int oldValue = positions[newIndex];
+                positions[newIndex] = counter;
+                positions[counter] = oldValue;
             }
             counter++;
         }
@@ -57,14 +67,25 @@ public class Reordering {
 
         FlexCompColMatrix columnMatrix = new FlexCompColMatrix(matrix);
 
+        int[] positions = new int[matrix.numColumns()];
+        for (int i = 0; i < positions.length; i++) {
+            positions[i] = i;
+        }
+
         int counter = 0;
         for (Index index : sortedByRow) {
-            if(counter != index.getIndex()) {
+            int newIndex = index.getIndex();
+            if(counter != newIndex && counter != positions[newIndex]) {
                 // reorder in place by swapping
-                SparseVector original = columnMatrix.getColumn(counter);
-                SparseVector newRow = columnMatrix.getColumn(index.getIndex());
-                columnMatrix.setColumn(counter, newRow);
-                columnMatrix.setColumn(index.getIndex(), original);
+                SparseVector original = columnMatrix.getColumn(positions[counter]);
+                SparseVector newColumn = columnMatrix.getColumn(positions[newIndex]);
+                columnMatrix.setColumn(counter, newColumn);
+                columnMatrix.setColumn(newIndex, original);
+
+                // remember that we swapped
+                int oldValue = positions[newIndex];
+                positions[newIndex] = counter;
+                positions[counter] = oldValue;
             }
             counter++;
         }
@@ -80,7 +101,7 @@ public class Reordering {
         public Comparable apply(Index input) {
             return input.getValue();
         }
-    });
+    }).reverse();
 
     public static Function<VectorEntry, Index> function = new Function<VectorEntry, Index>() {
         @Override

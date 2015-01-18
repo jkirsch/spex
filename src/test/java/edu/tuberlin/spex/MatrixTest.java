@@ -98,24 +98,26 @@ public class MatrixTest {
     @Test
     public void testPageRankDangling() throws Exception {
 
-        FlexCompRowMatrix adjacency = new FlexCompRowMatrix(3, 3);
+        FlexCompRowMatrix adjacency = new FlexCompRowMatrix(4, 4);
 
-        adjacency.set(0, 2, 1);
-        adjacency.set(1, 2, 1);
-        adjacency.set(2, 2, 1);
+        adjacency.set(0, 0, 1);
+        adjacency.set(1, 1, 2);
+        adjacency.set(2, 2, 3);
+        adjacency.set(3, 3, 4);
 
 
         PageRank pageRank = new PageRank(0.85);
 
         Matrix normalized = PageRank.normalizeColumnWise(new DenseMatrix(adjacency));
 
-        System.out.println(normalized);
+        System.out.println(new DenseMatrix(adjacency));
+        System.out.println(new DenseMatrix(Reordering.orderByRowSum(adjacency)));
+        System.out.println(new DenseMatrix(Reordering.orderByColumnSum(adjacency)));
 
         Vector normal = pageRank.calc(normalized);
         Vector reordered = pageRank.calc(PageRank.normalizeColumnWise(Reordering.orderByRowSum(adjacency)));
 
         Assert.assertThat(reordered.norm(Vector.Norm.One), closeTo(normal.norm(Vector.Norm.One), 0.0000001));
-
     }
 
     @Test
