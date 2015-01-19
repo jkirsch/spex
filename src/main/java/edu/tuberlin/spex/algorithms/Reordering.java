@@ -97,14 +97,14 @@ public class Reordering {
 
 
 
-    public static Ordering<Index> vectorEntryOrdering = Ordering.natural().onResultOf(new Function<Index, Comparable>() {
+    private static final Ordering<Index> vectorEntryOrdering = Ordering.natural().onResultOf(new Function<Index, Comparable>() {
         @Override
         public Comparable apply(Index input) {
             return input.getValue();
         }
     }).reverse();
 
-    public static Function<VectorEntry, Index> function = new Function<VectorEntry, Index>() {
+    private static final Function<VectorEntry, Index> function = new Function<VectorEntry, Index>() {
         @Override
         public Index apply(VectorEntry input) {
             return new Index(input.index(), input.get());
