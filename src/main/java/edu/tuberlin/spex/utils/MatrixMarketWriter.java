@@ -10,6 +10,7 @@ import no.uib.cipr.matrix.io.MatrixVectorWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -32,6 +33,7 @@ public class MatrixMarketWriter {
         MatrixSize matrixSize = new MatrixSize(matrix.numRows(), matrix.numColumns(), entries.size());
         matrixVectorWriter.printMatrixInfo(matrixInfo);
         matrixVectorWriter.printMatrixSize(matrixSize);
+        matrixVectorWriter.printComments(new String[] {"Matrix generated automatically on " + new Date().toString()});
 
         for (MatrixEntry matrixEntry : matrix) {
             int[] row = {matrixEntry.row()};

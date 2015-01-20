@@ -10,6 +10,7 @@ import edu.tuberlin.spex.algorithms.PageRank;
 import edu.tuberlin.spex.algorithms.Reordering;
 import edu.tuberlin.spex.utils.CompressionHelper;
 import edu.tuberlin.spex.utils.Datasets;
+import edu.tuberlin.spex.utils.MatrixMarketWriter;
 import no.uib.cipr.matrix.*;
 import no.uib.cipr.matrix.Vector;
 import no.uib.cipr.matrix.sparse.*;
@@ -56,10 +57,10 @@ public class PagerankTest {
                 Datasets.GRAPHS.dblp,
                 Datasets.GRAPHS.webBerkStan,
                 Datasets.GRAPHS.webStanford,
-                Datasets.GRAPHS.webNotreDame,
-                Datasets.GRAPHS.patents,
-                Datasets.GRAPHS.youtTube,
-                Datasets.GRAPHS.liveJournal
+                Datasets.GRAPHS.webNotreDame
+                //Datasets.GRAPHS.patents,
+                //Datasets.GRAPHS.youtTube,
+                //Datasets.GRAPHS.liveJournal
              );
     }
 
@@ -152,6 +153,9 @@ public class PagerankTest {
         createImage(orderByRowSumMatrix, dataset, max_scaled_size, "sortedByRow");
 
         createImage(orderByColumnSumMatrix, dataset, max_scaled_size, "sortedByColumn");
+
+        File file = new File("datasets", dataset.name() + ".mtx");
+        MatrixMarketWriter.write(readAdjacency, file);
 
        // calcPageRank(graphInfo, readAdjacency);
        // calcPageRank(graphInfo, new FlexCompRowMatrix(orderByColumnSumMatrix));
@@ -289,7 +293,6 @@ public class PagerankTest {
 
         EmpiricalDistribution empiricalDistribution = new EmpiricalDistribution(counter / 10);
         empiricalDistribution.load(downSample.getData());
-
         List<SummaryStatistics> binStats = empiricalDistribution.getBinStats();
 
         // sort in the order of least elements start painting in reverse order
@@ -325,7 +328,16 @@ public class PagerankTest {
             Color color1 = Color.blue.brighter();
             Color color2 = Color.blue.darker();
 
-            if (i >= 1) {
+            // filling onm the complete graph
+            double filling = (counter / (double) (adjacency.numRows() * adjacency.numColumns()));
+
+            // how large os the window
+
+            double estimate = matrixEntry.getValue() * ( scale * scale) ;
+
+            if (matrixEntry.getValue() >= empiricalDistribution.getNumericalMean()) {
+
+            //if (i >= 1) {
                 int size = 10;// + i;
 
                 double ratio = bin / (double) empiricalDistribution.getBinCount();
