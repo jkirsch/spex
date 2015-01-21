@@ -32,8 +32,8 @@ public class MatrixMarketWriter {
         MatrixInfo matrixInfo = new MatrixInfo(true, MatrixInfo.MatrixField.Real, MatrixInfo.MatrixSymmetry.General);
         MatrixSize matrixSize = new MatrixSize(matrix.numRows(), matrix.numColumns(), entries.size());
         matrixVectorWriter.printMatrixInfo(matrixInfo);
-        matrixVectorWriter.printMatrixSize(matrixSize);
         matrixVectorWriter.printComments(new String[] {"Matrix generated automatically on " + new Date().toString()});
+        matrixVectorWriter.printMatrixSize(matrixSize);
 
         for (MatrixEntry matrixEntry : matrix) {
             int[] row = {matrixEntry.row()};

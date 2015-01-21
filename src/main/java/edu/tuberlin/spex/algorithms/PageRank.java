@@ -9,6 +9,7 @@ import no.uib.cipr.matrix.Matrix;
 import no.uib.cipr.matrix.Vector;
 import no.uib.cipr.matrix.VectorEntry;
 import no.uib.cipr.matrix.sparse.CompDiagMatrix;
+import no.uib.cipr.matrix.sparse.SparseVector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -28,12 +29,16 @@ public class PageRank {
         this.c = c;
     }
 
-    public Vector calc(Matrix adjacency) {
+    public Vector calc(Normalized normalized) {
 
         Stopwatch stopwatch = new Stopwatch().start();
 
+        Matrix adjacency = normalized.columnNormalized;
+        Vector dangling = normalized.danglingNodes;
+
         // init p with = 1/n
         Vector p0 = VectorHelper.identical(adjacency.numRows(), 1. / (double) adjacency.numRows());
+        Vector def = VectorHelper.identical(adjacency.numRows(), 1. / (double) adjacency.numRows());
 
         // scale the constant term - so we can reuse it
         if (c < 1) {
@@ -47,11 +52,19 @@ public class PageRank {
         int counter = 0;
 
         // iterate
-        // P_k+1 = c * (A+ 1/n*diag(dangling)T )T * p_k + p_0
+        // P_k+1 = c * (A+ 1/n*diag(dangling)T )T * p_k + p_0 + (dangling)
+        // dangling = c / n * p_k * dangling
         do {
             p_k = p_k1.copy();
 
-            p_k1 = adjacency.transMultAdd(c, p_k, p0.copy());
+            // add random cooeff
+            Vector rand = new DenseVector(p0.size());
+            for (VectorEntry vectorEntry : dangling) {
+                int index = vectorEntry.index();
+                rand.set(index, c * p_k.get(index)  / (double) p0.size());
+            }
+            Vector y = rand.add(p0);
+            p_k1 = adjacency.transMultAdd(c, p_k, y);
 
             counter++;
 
@@ -66,30 +79,49 @@ public class PageRank {
         return p_k1;
     }
 
-    public static Matrix normalizeColumnWise(Matrix input) {
-
-        DenseVector rowSummer = new DenseVector(input.numRows());
+    public static Normalized normalizeRowWise(Matrix input) {
+        DenseVector rowSummer = VectorHelper.ones(input.numRows());
         CompDiagMatrix diagMatrix = new CompDiagMatrix(input.numRows(), input.numColumns());
 
-        for (VectorEntry vectorEntry : rowSummer) {
-            vectorEntry.set(1);
-        }
+        Vector rowSums = input.mult(rowSummer, rowSummer.copy());
+        Vector colSums = input.transMult(rowSummer, rowSummer.copy());
 
-        Vector colSums = input.mult(rowSummer, rowSummer.copy());
+        Vector dangling = new SparseVector(rowSummer.size());
 
-        for (VectorEntry colSum : colSums) {
-            double value = colSum.get();
+        for (VectorEntry rowSum : rowSums) {
+            double value = rowSum.get();
+            int index = rowSum.index();
             if(value > 0) {
-                diagMatrix.set(colSum.index(), colSum.index(), 1. / value);
+                diagMatrix.set(index, index, 1. / value);
             } else {
-                diagMatrix.set(colSum.index(), colSum.index(), 1);
+                diagMatrix.set(index, index, 1);
+                dangling.set(index, 1);
             }
         }
+
 
         // divide by column sum
         // To do column-wise scaling, use
         // diag(b) * B
-        return diagMatrix.mult(input, input.copy());
+        return new Normalized(diagMatrix.mult(input, input.copy()), dangling);
+
     }
 
+    public static class Normalized {
+        Matrix columnNormalized;
+        Vector danglingNodes;
+
+        public Normalized(Matrix columnNormalized, Vector danglingNodes) {
+            this.columnNormalized = columnNormalized;
+            this.danglingNodes = danglingNodes;
+        }
+
+        public Matrix getColumnNormalized() {
+            return columnNormalized;
+        }
+
+        public Vector getDanglingNodes() {
+            return danglingNodes;
+        }
+    }
 }

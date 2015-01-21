@@ -162,7 +162,7 @@ public class PagerankTest {
 
     }
 
-    private void calcPageRank(GraphInfo graphInfo, FlexCompRowMatrix cols) {
+    private void calcPageRank(GraphInfo graphInfo, FlexCompRowMatrix cols, Vector dangling) {
 
         MatrixStatisticsCollector matrixStatisticsCollector = new MatrixStatisticsCollector();
 
@@ -185,10 +185,10 @@ public class PagerankTest {
 
         PageRank pageRank = new PageRank(0.85);
 
-        Vector p_k1 = pageRank.calc(new FlexCompColMatrix(cols));
-        p_k1 = pageRank.calc(cols);
-        p_k1 = pageRank.calc(new CompRowMatrix(cols));
-        p_k1 = pageRank.calc(new CompColMatrix(cols));
+        Vector p_k1 = pageRank.calc(new PageRank.Normalized(new FlexCompColMatrix(cols), dangling));
+        p_k1 = pageRank.calc(new PageRank.Normalized(cols, dangling));
+        p_k1 = pageRank.calc(new PageRank.Normalized(new CompRowMatrix(cols), dangling));
+        p_k1 = pageRank.calc(new PageRank.Normalized(new CompColMatrix(cols), dangling));
 
 
         Multiset<Long> ranks = TreeMultiset.create(Ordering.natural());

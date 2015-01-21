@@ -84,9 +84,11 @@ public class MatrixTest {
 
         }
 
+        PageRank.Normalized normalized = PageRank.normalizeRowWise(adjacency);
+
         PageRank pageRank = new PageRank(0.85);
 
-        Vector p_k1 = pageRank.calc(adjacency);
+        Vector p_k1 = pageRank.calc(normalized);
 
         System.out.println(new DenseMatrix(adjacency));
         for (VectorEntry vectorEntry : p_k1) {
@@ -103,26 +105,38 @@ public class MatrixTest {
         adjacency.set(0, 0, 1);
         adjacency.set(1, 1, 2);
         adjacency.set(2, 2, 3);
-        adjacency.set(3, 3, 4);
-        adjacency.set(3, 1, 4);
+        adjacency.set(3, 1, 2);
 
+        System.out.println(new DenseMatrix(adjacency));
 
         PageRank pageRank = new PageRank(0.85);
 
-        Matrix normalized = PageRank.normalizeColumnWise(new DenseMatrix(adjacency));
+        PageRank.Normalized normalizedRowWise = PageRank.normalizeRowWise(new DenseMatrix(adjacency));
 
-        System.out.println(new DenseMatrix(adjacency));
-        System.out.println(new DenseMatrix(Reordering.orderByRowSum(adjacency)));
-        System.out.println(new DenseMatrix(Reordering.orderByColumnSum(adjacency)));
+        System.out.println(normalizedRowWise.getColumnNormalized());
+        System.out.println(normalizedRowWise.getDanglingNodes());
 
-        Vector normal = pageRank.calc(normalized);
-        Vector reordered = pageRank.calc(PageRank.normalizeColumnWise(Reordering.orderByRowSum(adjacency)));
+        //System.out.println(new DenseMatrix(adjacency));
+        //System.out.println(new DenseMatrix(normalizedRowWise.getColumnNormalized()));
+        //System.out.println(new DenseMatrix(Reordering.orderByRowSum(adjacency)));
+        //System.out.println(new DenseMatrix(Reordering.orderByColumnSum(adjacency)));
+
+        Vector normal = pageRank.calc(normalizedRowWise);
+        System.out.println(normal);
+
+        Matrix orderByColumnSum = Reordering.orderByColumnSum(adjacency);
+
+        PageRank.Normalized normalized = PageRank.normalizeRowWise(orderByColumnSum);
+        System.out.println("orderByColumnSum \n" + new DenseMatrix(orderByColumnSum));
+        System.out.println(normalized.getDanglingNodes());
+        Vector reordered = pageRank.calc(normalized);
+        System.out.println(reordered);
 
         Assert.assertThat(reordered.norm(Vector.Norm.One), closeTo(normal.norm(Vector.Norm.One), 0.0000001));
 
-        System.out.println(adjacency.norm(Matrix.Norm.Frobenius));
-        System.out.println(Reordering.orderByRowSum(adjacency).norm(Matrix.Norm.Frobenius));
-        System.out.println(Reordering.orderByRowSum(adjacency).norm(Matrix.Norm.Frobenius));
+        //System.out.println(adjacency.norm(Matrix.Norm.Frobenius));
+        //System.out.println(Reordering.orderByRowSum(adjacency).norm(Matrix.Norm.Frobenius));
+        //System.out.println(Reordering.orderByRowSum(adjacency).norm(Matrix.Norm.Frobenius));
     }
 
     @Test
@@ -155,12 +169,12 @@ public class MatrixTest {
         Matrix columnWise = adjacency.mult(permutationMatrix, new DenseMatrix(adjacency));
         System.out.println(columnWise);
 
-        System.out.println(PageRank.normalizeColumnWise(columnWise));
+        System.out.println(PageRank.normalizeRowWise(columnWise));
 
         PageRank pageRank = new PageRank(0.85);
-        pageRank.calc(PageRank.normalizeColumnWise(adjacency));
+        pageRank.calc(PageRank.normalizeRowWise(adjacency));
 
-        pageRank.calc(PageRank.normalizeColumnWise(columnWise));
+        pageRank.calc(PageRank.normalizeRowWise(columnWise));
 
 
 
