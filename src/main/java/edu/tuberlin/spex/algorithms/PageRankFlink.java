@@ -32,7 +32,7 @@ public class PageRankFlink {
 
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 
-        FlatMapOperator<String, Cell> items = env.readTextFile("/work/code/spex/datasets/smallTest.csv").flatMap(new RichFlatMapFunction<String, Cell>() {
+        FlatMapOperator<String, Cell> items = env.readTextFile("datasets/smallTest.csv").flatMap(new RichFlatMapFunction<String, Cell>() {
             @Override
             public void flatMap(String value, Collector<Cell> out) throws Exception {
 
@@ -60,8 +60,6 @@ public class PageRankFlink {
         });
 
         IterativeDataSet<Entry> ranks = env.fromCollection(generateVector(numberOfRows, 1 / (double) numberOfRows)).iterate(1);
-
-
 
         CoGroupOperator<Entry, Cell, Entry> iteration = ranks.coGroup(rowNormalized).where("index").equalTo("row").with(new RichCoGroupFunction<Entry, Cell, Entry>() {
 
