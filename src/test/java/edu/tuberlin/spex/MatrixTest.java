@@ -163,11 +163,11 @@ public class MatrixTest {
         System.out.println(permutationMatrix);
 
         // re-order row wise
-        System.out.println(permutationMatrix.mult(adjacency, new DenseMatrix(adjacency)));
+        System.out.println("Row-wise\n" + permutationMatrix.mult(adjacency, new DenseMatrix(adjacency)));
 
         // reorder column wise
         Matrix columnWise = adjacency.mult(permutationMatrix, new DenseMatrix(adjacency));
-        System.out.println(columnWise);
+        System.out.println("Column Wise\n" + columnWise);
 
         System.out.println(PageRank.normalizeRowWise(columnWise));
 

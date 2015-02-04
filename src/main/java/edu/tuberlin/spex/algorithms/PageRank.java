@@ -123,5 +123,13 @@ public class PageRank {
         public Vector getDanglingNodes() {
             return danglingNodes;
         }
+
+        @Override
+        public String toString() {
+            return "Normalized{" +
+                    "columnNormalized=" + columnNormalized +
+                    ", danglingNodes=" + danglingNodes +
+                    '}';
+        }
     }
 }
