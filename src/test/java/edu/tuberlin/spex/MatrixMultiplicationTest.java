@@ -7,6 +7,7 @@ import no.uib.cipr.matrix.DenseMatrix;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Matrix;
 import no.uib.cipr.matrix.Vector;
+import org.junit.Assert;
 import org.junit.Test;
 
 /**
@@ -20,7 +21,7 @@ public class MatrixMultiplicationTest {
     @Test
     public void testMultiplyBlocks() throws Exception {
 
-        DenseMatrix matrix = new DenseMatrix(3, 4);
+        DenseMatrix matrix = new DenseMatrix(4, 4);
 
         matrix.set(0, 0, 1);
         matrix.set(1, 0, 1);
@@ -37,7 +38,7 @@ public class MatrixMultiplicationTest {
         // 4 blocks
         MatrixBlock matrixBlock1 = generateBlock(0,0,2,2,0,0,1,1,0,1);
         MatrixBlock matrixBlock3 = generateBlock(0,2,2,2);
-        MatrixBlock matrixBlock4 = generateBlock(2,0,1,4,0,0,8,0,2,8);
+        MatrixBlock matrixBlock4 = generateBlock(2,0,2,4,0,0,8,0,2,8);
 
         System.out.println(matrixBlock1);
         System.out.println(matrixBlock3);
@@ -48,7 +49,10 @@ public class MatrixMultiplicationTest {
         Vector mult4 = matrixBlock4.mult(ones);
 
         // result obtained my adding all vectors together
-        System.out.println(mult1.add(mult3).add(mult4));
+        Vector blockWise = mult1.add(mult3).add(mult4);
+        System.out.println(blockWise);
+
+        Assert.assertEquals(mult.norm(Vector.Norm.TwoRobust), blockWise.norm(Vector.Norm.TwoRobust), 0.000001);
 
 
     }
