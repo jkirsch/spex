@@ -25,7 +25,6 @@ import no.uib.cipr.matrix.Vector;
 import no.uib.cipr.matrix.io.MatrixInfo;
 import no.uib.cipr.matrix.io.MatrixSize;
 import no.uib.cipr.matrix.io.MatrixVectorReader;
-import no.uib.cipr.matrix.sparse.CompRowMatrix;
 
 import java.io.IOException;
 import java.util.*;
@@ -189,7 +188,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix {
 
     private void construct(Matrix A, boolean deep) {
         if (deep) {
-            if (A instanceof CompRowMatrix) {
+            if (A instanceof AdaptedCompRowMatrix) {
                 AdaptedCompRowMatrix Ac = (AdaptedCompRowMatrix) A;
                 data = new double[Ac.data.length];
                 columnIndex = new int[Ac.columnIndex.length];

@@ -49,16 +49,19 @@ public class FlinkMatrixReader {
                 int blockSize = n / blocks;
 
                 int lastrow = 0;
+                int lastcol = 0;
                 // get the offset
                 for (Tuple3<Integer, Integer, Float> value : values) {
 
                     matrix.set(value.f0 % blockSize, value.f1 % blockSize, value.f2);
                     lastrow = value.f0;
+                    lastcol = value.f1;
                 }
 
                 // get the location of the block
-                int offset = (lastrow / blockSize - 1) * blockSize;
-                MatrixBlock matrixBlock = new MatrixBlock(offset,offset, new AdaptedCompRowMatrix(matrix));
+                int offset = (lastrow / blockSize ) * blockSize;
+                int offset2 = (lastcol / blockSize ) * blockSize;
+                MatrixBlock matrixBlock = new MatrixBlock(offset,offset2, new AdaptedCompRowMatrix(matrix));
 
                 out.collect(matrixBlock);
             }
