@@ -4,5 +4,6 @@ sudo: false
 cache:
   directories:
   - $HOME/.m2
+  - datasets
 
 language: java
