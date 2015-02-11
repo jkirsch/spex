@@ -1,21 +1,34 @@
 package edu.tuberlin.spex.algorithms.domain;
 
 import com.google.common.base.Preconditions;
+import no.uib.cipr.matrix.DenseMatrix;
 import no.uib.cipr.matrix.Matrix;
 import no.uib.cipr.matrix.Vector;
+
+import java.io.Serializable;
 
 /**
  * Date: 04.02.2015
  * Time: 20:21
  *
  */
-public class MatrixBlock {
+public class MatrixBlock implements Serializable {
 
     int startRow;
     int startCol;
 
     Matrix matrix;
 
+    public MatrixBlock() {
+    }
+
+    /**
+     * The matrix should be normalized and start at 0.
+     *
+     * @param startRow
+     * @param startCol
+     * @param matrix
+     */
     public MatrixBlock(int startRow, int startCol, Matrix matrix) {
         this.startRow = startRow;
         this.startCol = startCol;
@@ -68,4 +81,29 @@ public class MatrixBlock {
                 ", matrix=\n" + matrix +
                 '}';
     }
+
+    /**
+     * Simple Matrix generator
+     * @param startRow
+     * @param startCol
+     * @param elements elements are a list of row,col,value .. row,col,value ...
+     * @return
+     */
+    public static MatrixBlock generateBlock(int startRow, int startCol, int rows, int columns, int ... elements) {
+
+        Preconditions.checkArgument(elements.length % 3 == 0, "Always 3 elements make a cell");
+        Preconditions.checkArgument(rows < 10,
+                "This is using the DenseFormat which is memory bound and does not support row > 10");
+        Preconditions.checkArgument(columns < 10,
+                "This is using the DenseFormat which is memory bound and does not support columns > 10");
+
+        Matrix matrix = new DenseMatrix(rows, columns);
+
+        for (int i = 0; i < elements.length; i+=3) {
+            matrix.set(elements[i], elements[i + 1], elements[i + 2]);
+        }
+
+        return new MatrixBlock(startRow, startCol, matrix);
+    }
+
 }

@@ -1,14 +1,14 @@
 package edu.tuberlin.spex;
 
-import com.google.common.base.Preconditions;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.utils.VectorHelper;
 import no.uib.cipr.matrix.DenseMatrix;
 import no.uib.cipr.matrix.DenseVector;
-import no.uib.cipr.matrix.Matrix;
 import no.uib.cipr.matrix.Vector;
 import org.junit.Assert;
 import org.junit.Test;
+
+import static edu.tuberlin.spex.algorithms.domain.MatrixBlock.generateBlock;
 
 /**
  * Date: 04.02.2015
@@ -36,7 +36,7 @@ public class MatrixMultiplicationTest {
         System.out.println(mult);
 
         // 4 blocks
-        MatrixBlock matrixBlock1 = generateBlock(0,0,2,2,0,0,1,1,0,1);
+        MatrixBlock matrixBlock1 = generateBlock(0, 0, 2, 2, 0, 0, 1, 1, 0, 1);
         MatrixBlock matrixBlock3 = generateBlock(0,2,2,2);
         MatrixBlock matrixBlock4 = generateBlock(2,0,2,4,0,0,8,0,2,8);
 
@@ -57,23 +57,5 @@ public class MatrixMultiplicationTest {
 
     }
 
-    /**
-     * Simple Matrix generator
-     * @param startRow
-     * @param startCol
-     * @param elements elements are a list of row,col,value .. row,col,value ...
-     * @return
-     */
-    private MatrixBlock generateBlock(int startRow, int startCol, int rows, int columns, int ... elements) {
 
-        Preconditions.checkArgument(elements.length % 3 == 0, "Always 3 elements make a cell");
-
-        Matrix matrix = new DenseMatrix(rows, columns);
-
-        for (int i = 0; i < elements.length; i+=3) {
-            matrix.set(elements[i], elements[i + 1], elements[i + 2]);
-        }
-
-        return new MatrixBlock(startRow, startCol, matrix);
-    }
 }
