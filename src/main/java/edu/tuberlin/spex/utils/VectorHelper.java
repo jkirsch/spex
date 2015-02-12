@@ -1,5 +1,6 @@
 package edu.tuberlin.spex.utils;
 
+import edu.tuberlin.spex.matrix.io.adapted.DenseVectorHolder;
 import no.uib.cipr.matrix.DenseVector;
 
 import java.util.Arrays;
@@ -21,5 +22,8 @@ public class VectorHelper {
         return identical(size, 1);
     }
 
+    public static DenseVectorHolder wrap(DenseVector vector) {
+        return new DenseVectorHolder(vector);
+    }
 
 }

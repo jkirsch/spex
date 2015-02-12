@@ -80,7 +80,7 @@ public class PageRank {
     }
 
     public static Normalized normalizeRowWise(Matrix input) {
-        DenseVector rowSummer = VectorHelper.ones(input.numRows());
+        Vector rowSummer = VectorHelper.ones(input.numRows());
         CompDiagMatrix diagMatrix = new CompDiagMatrix(input.numRows(), input.numColumns());
 
         Vector rowSums = input.mult(rowSummer, rowSummer.copy());

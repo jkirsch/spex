@@ -28,7 +28,7 @@ public class MatrixMultiplicationTest {
         matrix.set(2, 0, 8);
         matrix.set(2, 2, 8);
 
-        DenseVector ones = VectorHelper.ones(matrix.numColumns());
+        Vector ones = VectorHelper.ones(matrix.numColumns());
 
         Vector mult = matrix.mult(ones, new DenseVector(matrix.numRows()));
 

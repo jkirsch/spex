@@ -8,6 +8,7 @@ import edu.tuberlin.spex.matrix.io.DenseMatrixSerializer;
 import edu.tuberlin.spex.matrix.io.DenseVectorSerializer;
 import edu.tuberlin.spex.matrix.io.LinkedSparseMatrixSerializer;
 import edu.tuberlin.spex.matrix.io.adapted.AdaptedCompRowMatrix;
+import edu.tuberlin.spex.matrix.io.adapted.DenseVectorHolder;
 import edu.tuberlin.spex.utils.VectorHelper;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import no.uib.cipr.matrix.DenseMatrix;
@@ -49,24 +50,24 @@ public class FlinkMatrixReader {
 
         // now multiply the matrixblocks with the vector
 
-        DataSource<DenseVector> denseVectorDataSource = env.fromElements(generateVector(n, 1 / (double) n));
+        DataSource<DenseVectorHolder> denseVectorDataSource = env.fromElements(VectorHelper.wrap(VectorHelper.identical(n, 1 / (double) n)));
 
 
-        IterativeDataSet<DenseVector> iterate = denseVectorDataSource.iterate(1);
+        IterativeDataSet<DenseVectorHolder> iterate = denseVectorDataSource.iterate(1);
 
-        ReduceOperator<DenseVector> reduce = iterate.cross(matrixBlocks).map(new MapFunction<Tuple2<DenseVector, MatrixBlock>, DenseVector>() {
+        ReduceOperator<DenseVectorHolder> reduce = iterate.cross(matrixBlocks).map(new MapFunction<Tuple2<DenseVectorHolder, MatrixBlock>, DenseVectorHolder>() {
             @Override
-            public DenseVector map(Tuple2<DenseVector, MatrixBlock> value) throws Exception {
-                return (DenseVector) value.f1.mult(value.f0);
+            public DenseVectorHolder map(Tuple2<DenseVectorHolder, MatrixBlock> value) throws Exception {
+                return value.f1.mult(value.f0);
             }
-        }).reduce(new ReduceFunction<DenseVector>() {
+        }).reduce(new ReduceFunction<DenseVectorHolder>() {
             @Override
-            public DenseVector reduce(DenseVector vector, DenseVector t1) throws Exception {
-                return (DenseVector) vector.add(t1);
+            public DenseVectorHolder reduce(DenseVectorHolder vector, DenseVectorHolder t1) throws Exception {
+                return vector.add(t1);
             }
         });
 
-        DataSet<DenseVector> result = iterate.closeWith(reduce);
+        DataSet<DenseVectorHolder> result = iterate.closeWith(reduce);
 
         result.print();
 
@@ -76,11 +77,6 @@ public class FlinkMatrixReader {
 
         env.execute();
 
-    }
-
-    static DenseVector generateVector(int size, double value) {
-
-        return VectorHelper.identical(size, value);
     }
 
 

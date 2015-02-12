@@ -1,7 +1,9 @@
 package edu.tuberlin.spex.algorithms.domain;
 
 import com.google.common.base.Preconditions;
+import edu.tuberlin.spex.matrix.io.adapted.DenseVectorHolder;
 import no.uib.cipr.matrix.DenseMatrix;
+import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Matrix;
 import no.uib.cipr.matrix.Vector;
 
@@ -35,14 +37,6 @@ public class MatrixBlock implements Serializable {
         this.matrix = matrix;
     }
 
-    public long getStartRow() {
-        return startRow;
-    }
-
-    public long getStartCol() {
-        return startCol;
-    }
-
     public Matrix getMatrix() {
         return matrix;
     }
@@ -71,6 +65,12 @@ public class MatrixBlock implements Serializable {
         //Vector result = matrix.mult(slice, new DenseVector(matrix.numRows()));
 
         return res.getVector(); //VectorSlicer.upscale(result, x.size(), startRow);
+    }
+
+    public DenseVectorHolder mult(DenseVectorHolder x) {
+        Vector ret = mult(x.getVector());
+        x.setVector((DenseVector) ret);
+        return x;
     }
 
     @Override
@@ -104,6 +104,26 @@ public class MatrixBlock implements Serializable {
         }
 
         return new MatrixBlock(startRow, startCol, matrix);
+    }
+
+    public int getStartRow() {
+        return startRow;
+    }
+
+    public void setStartRow(int startRow) {
+        this.startRow = startRow;
+    }
+
+    public int getStartCol() {
+        return startCol;
+    }
+
+    public void setStartCol(int startCol) {
+        this.startCol = startCol;
+    }
+
+    public void setMatrix(Matrix matrix) {
+        this.matrix = matrix;
     }
 
 }

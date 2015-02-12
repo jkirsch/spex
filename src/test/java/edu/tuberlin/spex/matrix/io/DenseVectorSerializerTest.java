@@ -13,7 +13,7 @@ public class DenseVectorSerializerTest extends AbstractIOTest {
     @Test
     public void testSerialization() throws Exception {
 
-        DenseVector ones = VectorHelper.ones(100);
+        Vector ones = VectorHelper.ones(100);
 
         serialize(ones);
         DenseVector deserialize = deserialize(DenseVector.class);

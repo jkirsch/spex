@@ -22,7 +22,7 @@ public class Reordering {
 
     public static Matrix orderByRowSum(Matrix matrix) {
 
-        DenseVector IDENTITY_VECTOR = VectorHelper.ones(matrix.numColumns());
+        Vector IDENTITY_VECTOR = VectorHelper.ones(matrix.numColumns());
 
         Vector rowSums = matrix.mult(IDENTITY_VECTOR, new DenseVector(matrix.numColumns()));
 
@@ -60,7 +60,7 @@ public class Reordering {
 
     public static Matrix orderByColumnSum(Matrix matrix) {
 
-        DenseVector IDENTITY_VECTOR = VectorHelper.ones(matrix.numColumns());
+        Vector IDENTITY_VECTOR = VectorHelper.ones(matrix.numColumns());
 
         Vector colSums = matrix.transMult(IDENTITY_VECTOR, new DenseVector(matrix.numColumns()));
 

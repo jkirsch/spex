@@ -13,7 +13,8 @@ import java.io.Serializable;
  * Time: 00:38
  *
  */
-public class DenseVectorSerializer  extends Serializer<DenseVector> implements Serializable {
+public class DenseVectorSerializer extends Serializer<DenseVector> implements Serializable {
+
     @Override
     public void write(Kryo kryo, Output output, DenseVector vector) {
         double[] data = vector.getData();
