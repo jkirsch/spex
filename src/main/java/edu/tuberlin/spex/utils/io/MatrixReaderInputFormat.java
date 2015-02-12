@@ -1,5 +1,6 @@
 package edu.tuberlin.spex.utils.io;
 
+import com.google.common.base.Preconditions;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.io.DelimitedInputFormat;
 import org.apache.flink.api.java.tuple.Tuple3;
@@ -29,6 +30,8 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
      * Code of \n, used to identify if \n is used as delimiter
      */
     private static final byte NEW_LINE = (byte) '\n';
+    private final int indexOffset;
+    private final int size;
 
     /**
      * The name of the charset to use for decoding.
@@ -48,9 +51,24 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
     }
 
 
+    /**
+     * Default to 1 based file
+     * @param filePath
+     */
     public MatrixReaderInputFormat(Path filePath) {
-        super(filePath);
+        this(filePath, -1);
     }
+
+    public MatrixReaderInputFormat(Path filePath, int indexOffset) {
+        this(filePath, indexOffset, Integer.MAX_VALUE);
+    }
+
+    public MatrixReaderInputFormat(Path filePath, int indexOffset, int size) {
+        super(filePath);
+        this.indexOffset = indexOffset;
+        this.size = size;
+    }
+
 
     @Override
     public void configure(Configuration parameters) {
@@ -74,17 +92,29 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
 
         String value = new String(bytes, offset, numBytes, this.charsetName);
 
-
         if (!StringUtils.isEmpty(value) && !StringUtils.startsWithAny(value, "//", "%")) {
             Scanner scanner = new Scanner(value);
             scanner.useLocale(Locale.ENGLISH);
-            int source = scanner.nextInt();
-            int dest = scanner.nextInt();
-            float v = scanner.nextFloat();
-            if(v < 2) {
-                reuse.setFields(source, dest, v);
+            try {
+                int row = scanner.nextInt() + indexOffset;
+                int column = scanner.nextInt() + indexOffset;
+                float matrixEntry = scanner.nextFloat();
+
+                if(row - indexOffset == size) {
+                    // this element is the matrix size -- skip it
+                    return null;
+                }
+
+                Preconditions.checkElementIndex(row, size, "row");
+                Preconditions.checkElementIndex(column, size, "col");
+
+                reuse.setFields(row, column, matrixEntry);
                 return reuse;
+
+            } catch (java.util.NoSuchElementException e) {
+                throw new IllegalArgumentException("Error parsing line >" +value+"<",e);
             }
+
         }
 
         return null;

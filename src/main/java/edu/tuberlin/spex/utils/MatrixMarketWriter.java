@@ -23,7 +23,6 @@ public class MatrixMarketWriter {
     public static void write(Matrix matrix, File file) throws IOException {
 
         // write out the file
-        // skip back to the beginning and write the header
         FileOutputStream fileOutputStream = new FileOutputStream(file);
         MatrixVectorWriter matrixVectorWriter = new MatrixVectorWriter(fileOutputStream);
 
@@ -31,6 +30,7 @@ public class MatrixMarketWriter {
 
         MatrixInfo matrixInfo = new MatrixInfo(true, MatrixInfo.MatrixField.Real, MatrixInfo.MatrixSymmetry.General);
         MatrixSize matrixSize = new MatrixSize(matrix.numRows(), matrix.numColumns(), entries.size());
+        // write the header
         matrixVectorWriter.printMatrixInfo(matrixInfo);
         matrixVectorWriter.printComments(new String[] {"Matrix generated automatically on " + new Date().toString()});
         matrixVectorWriter.printMatrixSize(matrixSize);

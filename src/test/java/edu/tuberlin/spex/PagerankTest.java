@@ -122,7 +122,7 @@ public class PagerankTest {
                         readAdjacency.add(column, row, 1d);
                     }
 
-                    if (++counter % 100000 == 0) LOG.info("Read {} edges ...", counter);
+                    if (++counter % 100000 == 0) LOG.info(String.format("Read %9d edges ...", counter));
                 }
 
                 return true;

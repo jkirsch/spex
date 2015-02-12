@@ -2,20 +2,25 @@ package edu.tuberlin.spex.algorithms;
 
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.matrix.MatrixBlockPartitioner;
+import edu.tuberlin.spex.matrix.MatrixBlockReducer;
 import edu.tuberlin.spex.matrix.io.AdaptedCompRowMatrixSerializer;
 import edu.tuberlin.spex.matrix.io.DenseMatrixSerializer;
+import edu.tuberlin.spex.matrix.io.DenseVectorSerializer;
 import edu.tuberlin.spex.matrix.io.LinkedSparseMatrixSerializer;
 import edu.tuberlin.spex.matrix.io.adapted.AdaptedCompRowMatrix;
+import edu.tuberlin.spex.utils.VectorHelper;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import no.uib.cipr.matrix.DenseMatrix;
+import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.sparse.LinkedSparseMatrix;
-import org.apache.flink.api.common.functions.GroupReduceFunction;
+import org.apache.flink.api.common.functions.MapFunction;
+import org.apache.flink.api.common.functions.ReduceFunction;
+import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
-import org.apache.flink.api.java.operators.DataSource;
-import org.apache.flink.api.java.operators.UnsortedGrouping;
+import org.apache.flink.api.java.operators.*;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.util.Collector;
 
 /**
  * Date: 09.02.2015
@@ -27,7 +32,7 @@ public class FlinkMatrixReader {
 
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 
-        DataSource<Tuple3<Integer, Integer, Float>> input = env.createInput(new MatrixReaderInputFormat(new Path("datasets/webNotreDame.mtx")));
+        DataSource<Tuple3<Integer, Integer, Float>> input = env.createInput(new MatrixReaderInputFormat(new Path("datasets/webNotreDame.mtx"), -1, 325729));
 
         final int n = 325729;
         final int blocks = 4;
@@ -35,40 +40,47 @@ public class FlinkMatrixReader {
         env.registerKryoSerializer(DenseMatrix.class, new DenseMatrixSerializer());
         env.registerKryoSerializer(LinkedSparseMatrix.class, new LinkedSparseMatrixSerializer());
         env.registerKryoSerializer(AdaptedCompRowMatrix.class, new AdaptedCompRowMatrixSerializer());
+        env.registerKryoSerializer(DenseVector.class, new DenseVectorSerializer());
 
         UnsortedGrouping<Tuple3<Integer, Integer, Float>> tuple3UnsortedGrouping = input.groupBy(new MatrixBlockPartitioner(n, blocks));
 
-        tuple3UnsortedGrouping.reduceGroup(new GroupReduceFunction<Tuple3<Integer, Integer, Float>, MatrixBlock>() {
+        final GroupReduceOperator<Tuple3<Integer, Integer, Float>, MatrixBlock> matrixBlocks = tuple3UnsortedGrouping.
+                reduceGroup(new MatrixBlockReducer(n, blocks));
+
+        // now multiply the matrixblocks with the vector
+
+        DataSource<DenseVector> denseVectorDataSource = env.fromElements(generateVector(n, 1 / (double) n));
+
+
+        IterativeDataSet<DenseVector> iterate = denseVectorDataSource.iterate(1);
+
+        ReduceOperator<DenseVector> reduce = iterate.cross(matrixBlocks).map(new MapFunction<Tuple2<DenseVector, MatrixBlock>, DenseVector>() {
             @Override
-            public void reduce(Iterable<Tuple3<Integer, Integer, Float>> values, Collector<MatrixBlock> out) throws Exception {
-
-                LinkedSparseMatrix matrix = new LinkedSparseMatrix(n / blocks, n / blocks);
-                // get the row offset
-                // get the column offset
-
-                int blockSize = n / blocks;
-
-                int lastrow = 0;
-                int lastcol = 0;
-                // get the offset
-                for (Tuple3<Integer, Integer, Float> value : values) {
-
-                    matrix.set(value.f0 % blockSize, value.f1 % blockSize, value.f2);
-                    lastrow = value.f0;
-                    lastcol = value.f1;
-                }
-
-                // get the location of the block
-                int offset = (lastrow / blockSize ) * blockSize;
-                int offset2 = (lastcol / blockSize ) * blockSize;
-                MatrixBlock matrixBlock = new MatrixBlock(offset,offset2, new AdaptedCompRowMatrix(matrix));
-
-                out.collect(matrixBlock);
+            public DenseVector map(Tuple2<DenseVector, MatrixBlock> value) throws Exception {
+                return (DenseVector) value.f1.mult(value.f0);
             }
-        }).first(2).print();
+        }).reduce(new ReduceFunction<DenseVector>() {
+            @Override
+            public DenseVector reduce(DenseVector vector, DenseVector t1) throws Exception {
+                return (DenseVector) vector.add(t1);
+            }
+        });
+
+        DataSet<DenseVector> result = iterate.closeWith(reduce);
+
+        result.print();
+
+        String executionPlan = env.getExecutionPlan();
+
+        System.out.println(executionPlan);
 
         env.execute();
 
+    }
+
+    static DenseVector generateVector(int size, double value) {
+
+        return VectorHelper.identical(size, value);
     }
 
 
