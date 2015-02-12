@@ -22,7 +22,7 @@ public class MatrixBlockPartitionerTest {
 
         for (int row = 0; row < n; row++) {
             for (int col = 0; col < n; col++) {
-                Long key = matrixBlockPartitioner.getKey(new Tuple3<>(row, col, 2f));
+                Long key = matrixBlockPartitioner.getKey(new Tuple3<>(row, col, 2d));
                 counter.add(key);
                 System.out.print(key);
             }

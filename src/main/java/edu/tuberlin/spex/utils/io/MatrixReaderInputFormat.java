@@ -17,7 +17,7 @@ import java.util.Scanner;
  * Time: 22:48
  *
  */
-public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer, Integer, Float>> {
+public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer, Integer, Double>> {
 
     private static final long serialVersionUID = 1L;
 
@@ -81,7 +81,7 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
     }
 
     @Override
-    public Tuple3<Integer, Integer, Float> readRecord(Tuple3<Integer, Integer, Float> reuse, byte[] bytes, int offset, int numBytes) throws IOException {
+    public Tuple3<Integer, Integer, Double> readRecord(Tuple3<Integer, Integer, Double> reuse, byte[] bytes, int offset, int numBytes) throws IOException {
 
         //Check if \n is used as delimiter and the end of this line is a \r, then remove \r from the line
         if (this.getDelimiter() != null && this.getDelimiter().length == 1
@@ -98,7 +98,7 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
             try {
                 int row = scanner.nextInt() + indexOffset;
                 int column = scanner.nextInt() + indexOffset;
-                float matrixEntry = scanner.nextFloat();
+                double matrixEntry = scanner.nextDouble();
 
                 if(row - indexOffset == size) {
                     // this element is the matrix size -- skip it

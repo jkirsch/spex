@@ -9,7 +9,7 @@ import org.apache.flink.api.java.tuple.Tuple3;
  * Time: 22:56
  *
  */
-public class MatrixBlockPartitioner implements KeySelector<Tuple3<Integer, Integer, Float>, Long> {
+public class MatrixBlockPartitioner implements KeySelector<Tuple3<Integer, Integer, Double>, Long> {
 
     /** Size the of dataset. **/
     final int n;
@@ -34,7 +34,7 @@ public class MatrixBlockPartitioner implements KeySelector<Tuple3<Integer, Integ
 
 
     @Override
-    public Long getKey(Tuple3<Integer, Integer, Float> value) throws Exception {
+    public Long getKey(Tuple3<Integer, Integer, Double> value) throws Exception {
 
         long row = value.f0 / blockSize;
         long column = value.f1 / blockSize;

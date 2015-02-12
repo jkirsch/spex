@@ -69,8 +69,7 @@ public class MatrixBlock implements Serializable {
 
     public DenseVectorHolder mult(DenseVectorHolder x) {
         Vector ret = mult(x.getVector());
-        x.setVector((DenseVector) ret);
-        return x;
+        return new DenseVectorHolder((DenseVector) ret);
     }
 
     @Override
