@@ -24,7 +24,7 @@ import java.util.List;
 public class TestKryoIterationSerializer {
 
     @Test
-    public void testName() throws Exception {
+    public void testFLINK1531() throws Exception {
 
         // this is an artificial program, it does not compute anything sensical
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();

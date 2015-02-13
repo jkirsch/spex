@@ -13,6 +13,11 @@ import org.apache.flink.configuration.Configuration;
 public class MatrixBlockVectorKernel extends RichMapFunction<MatrixBlock, DenseVector> {
 
     private DenseVector vector;
+    private final double alpha;
+
+    public MatrixBlockVectorKernel(double alpha) {
+        this.alpha = alpha;
+    }
 
     @Override
     public void open(Configuration parameters) throws Exception {
@@ -22,7 +27,8 @@ public class MatrixBlockVectorKernel extends RichMapFunction<MatrixBlock, DenseV
 
     @Override
     public DenseVector map(MatrixBlock matrixBlock) throws Exception {
-        return (DenseVector) matrixBlock.mult(vector);
+
+        return (DenseVector) matrixBlock.mult(alpha, vector);
 
     }
 }

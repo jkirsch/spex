@@ -24,13 +24,15 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple3<Integer, 
     int blocks;
 
     final boolean rowNormalize;
+    final boolean isTransposed;
 
     private DenseVector rowSums;
 
-    public MatrixBlockReducer(int n, int blocks, boolean rowNormalize) {
+    public MatrixBlockReducer(int n, int blocks, boolean rowNormalize, boolean isTransposed) {
         this.n = n;
         this.blocks = blocks;
         this.rowNormalize = rowNormalize;
+        this.isTransposed = isTransposed;
     }
 
     @Override
@@ -38,11 +40,13 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple3<Integer, 
         super.open(parameters);
 
         // generate Vector
-        List<Tuple2<Integer, Double>> aggregatedSums = getRuntimeContext().getBroadcastVariable("rowSums");
+        if(rowNormalize) {
+            List<Tuple2<Integer, Double>> aggregatedSums = getRuntimeContext().getBroadcastVariable("rowSums");
 
-        rowSums = new DenseVector(n);
-        for (Tuple2<Integer, Double> aggregatedSum : aggregatedSums) {
-            rowSums.set(aggregatedSum.f0, aggregatedSum.f1);
+            rowSums = new DenseVector(n);
+            for (Tuple2<Integer, Double> aggregatedSum : aggregatedSums) {
+                rowSums.set(aggregatedSum.f0, aggregatedSum.f1);
+            }
         }
 
     }
@@ -71,9 +75,13 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple3<Integer, 
         while (peekingIterator.hasNext()) {
             Tuple3<Integer, Integer, Double> value = peekingIterator.next();
             try {
-                // if we row normalize, divide this by the row Sum
+                // if we row normalize, divide this by the row sum
+                if(rowSums.get(isTransposed ? value.f1 : value.f0) == 0) {
+                    System.out.println();
+                }
+
                 double matrixEntry = rowNormalize ?
-                        value.f2 / rowSums.get(value.f0)
+                        value.f2 / rowSums.get(isTransposed ? value.f1 : value.f0)
                         : value.f2;
 
                 matrix.set(value.f0 - blockDimensions.getRowStart(), value.f1 - blockDimensions.getColStart(), matrixEntry);

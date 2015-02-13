@@ -38,7 +38,6 @@ public class PageRank {
 
         // init p with = 1/n
         Vector p0 = VectorHelper.identical(adjacency.numRows(), 1. / (double) adjacency.numRows());
-        Vector def = VectorHelper.identical(adjacency.numRows(), 1. / (double) adjacency.numRows());
 
         // scale the constant term - so we can reuse it
         if (c < 1) {
@@ -57,18 +56,19 @@ public class PageRank {
         do {
             p_k = p_k1.copy();
 
-            // add random cooeff
+            // add random coefficient
             Vector rand = new DenseVector(p0.size());
             for (VectorEntry vectorEntry : dangling) {
                 int index = vectorEntry.index();
-                rand.set(index, c * p_k.get(index)  / (double) p0.size());
+                rand.set(index, p_k.get(index) );
             }
-            Vector y = rand.add(p0);
+            double added = c * rand.norm(Vector.Norm.One) / (double) p0.size();
+            Vector y = VectorHelper.identical(p0.size(), added).add(p0);
             p_k1 = adjacency.transMultAdd(c, p_k, y);
 
             counter++;
 
-        } while (p_k1.copy().add(-1, p_k).norm(Vector.Norm.One) > 0.0000000001);
+        } while (p_k1.copy().add(-1, p_k).norm(Vector.Norm.One) > 0.00000000001);
 
         stopwatch.stop();
 

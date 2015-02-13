@@ -4,7 +4,6 @@ import edu.tuberlin.spex.algorithms.PageRank;
 import edu.tuberlin.spex.algorithms.Reordering;
 import no.uib.cipr.matrix.*;
 import no.uib.cipr.matrix.sparse.FlexCompRowMatrix;
-import no.uib.cipr.matrix.sparse.SparseVector;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -40,6 +39,32 @@ public class MatrixTest {
     }
 
     @Test
+    public void testPageRankDanglingWiki() throws Exception {
+
+        FlexCompRowMatrix adjacency = new FlexCompRowMatrix(createKnownMatrix());
+
+        PageRank.Normalized normalized = PageRank.normalizeRowWise(adjacency);
+        System.out.println(new DenseMatrix(normalized.getColumnNormalized()));
+
+        PageRank pageRank = new PageRank(0.8d);
+
+        Vector p_k1 = pageRank.calc(normalized);
+
+        for (VectorEntry vectorEntry : p_k1) {
+            System.out.printf("\t %2d %1.3f\n", vectorEntry.index(), vectorEntry.get());
+        }
+        System.out.println(p_k1.norm(Vector.Norm.One));
+
+
+        Assert.assertThat(p_k1.norm(Vector.Norm.One), closeTo(1, 0.00001));
+        Assert.assertThat(p_k1.get(0), closeTo(0.0675, 0.0001));
+        Assert.assertThat(p_k1.get(1), closeTo(0.0701, 0.0001));
+        Assert.assertThat(p_k1.get(2), closeTo(0.0934, 0.0001));
+        Assert.assertThat(p_k1.get(3), closeTo(0.0768, 0.0001));
+
+    }
+
+    @Test
     public void testPageRank() throws Exception {
 
         FlexCompRowMatrix adjacency = new FlexCompRowMatrix(6, 6);
@@ -72,18 +97,6 @@ public class MatrixTest {
         adjacency.add(5, 4, 1);
 
 
-        // divide by column sum
-        for (int i = 0; i < adjacency.numRows(); i++) {
-
-            SparseVector row = adjacency.getRow(i);
-            double sum = row.norm(Vector.Norm.One);
-
-            if (sum > 0) {
-                row.scale(1. / sum);
-            }
-
-        }
-
         PageRank.Normalized normalized = PageRank.normalizeRowWise(adjacency);
 
         PageRank pageRank = new PageRank(0.85);
@@ -95,6 +108,8 @@ public class MatrixTest {
             System.out.printf("\t %2d %1.3f\n", vectorEntry.index(), vectorEntry.get());
         }
         System.out.println(p_k1.norm(Vector.Norm.One));
+
+        Assert.assertThat(p_k1.norm(Vector.Norm.One), closeTo(1, 0.00001));
     }
 
     @Test
@@ -177,6 +192,28 @@ public class MatrixTest {
         pageRank.calc(PageRank.normalizeRowWise(columnWise));
 
 
+
+    }
+
+    public static DenseMatrix createKnownMatrix() {
+
+        // recreate the matrix from
+        // http://de.wikipedia.org/wiki/Google-Matrix#cite_note-1
+
+        int[][] pos = {{1, 3}, {2, 1}, {2, 6}, {3, 4}, {3, 5}, {4, 2}, {4, 7}, {7, 8}, {8, 7}};
+
+        // Matrix is just for visual inspection
+        DenseMatrix m = new DenseMatrix(8, 8);
+
+        for (int[] positions : pos) {
+            int row = positions[0] - 1;
+            int col = positions[1] - 1;
+
+            m.set(row, col, 1d);
+        }
+
+
+        return m;
 
     }
 

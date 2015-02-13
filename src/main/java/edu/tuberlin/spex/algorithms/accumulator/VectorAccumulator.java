@@ -1,5 +1,8 @@
 package edu.tuberlin.spex.algorithms.accumulator;
 
+/**
+ * Taken from Flink java examples
+ */
 import org.apache.flink.api.common.accumulators.Accumulator;
 
 import java.io.IOException;

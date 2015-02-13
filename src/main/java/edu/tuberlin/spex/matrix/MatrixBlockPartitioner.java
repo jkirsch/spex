@@ -21,7 +21,7 @@ public class MatrixBlockPartitioner implements KeySelector<Tuple3<Integer, Integ
 
     public MatrixBlockPartitioner(int n, int blocks) {
 
-        Preconditions.checkArgument(blocks % 2 == 0, "Blocks needs to be a factor of two");
+       // Preconditions.checkArgument(blocks % 2 == 0, "Blocks needs to be a factor of two");
         Preconditions.checkArgument(n >= blocks, "The matrix needs to be at least the size of the block");
 
         this.n = n;

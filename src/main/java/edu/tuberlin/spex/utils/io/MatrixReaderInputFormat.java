@@ -32,6 +32,7 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
     private static final byte NEW_LINE = (byte) '\n';
     private final int indexOffset;
     private final int size;
+    private final boolean transpose;
 
     /**
      * The name of the charset to use for decoding.
@@ -60,13 +61,14 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
     }
 
     public MatrixReaderInputFormat(Path filePath, int indexOffset) {
-        this(filePath, indexOffset, Integer.MAX_VALUE);
+        this(filePath, indexOffset, Integer.MAX_VALUE, false);
     }
 
-    public MatrixReaderInputFormat(Path filePath, int indexOffset, int size) {
+    public MatrixReaderInputFormat(Path filePath, int indexOffset, int size, boolean transpose) {
         super(filePath);
         this.indexOffset = indexOffset;
         this.size = size;
+        this.transpose = transpose;
     }
 
 
@@ -108,7 +110,11 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
                 Preconditions.checkElementIndex(row, size, "row");
                 Preconditions.checkElementIndex(column, size, "col");
 
-                reuse.setFields(row, column, matrixEntry);
+                if(!transpose) {
+                    reuse.setFields(row, column, matrixEntry);
+                } {
+                    reuse.setFields(column, row, matrixEntry);
+                }
                 return reuse;
 
             } catch (java.util.NoSuchElementException e) {

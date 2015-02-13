@@ -1,9 +1,7 @@
 package edu.tuberlin.spex.algorithms.domain;
 
 import com.google.common.base.Preconditions;
-import edu.tuberlin.spex.matrix.io.adapted.DenseVectorHolder;
 import no.uib.cipr.matrix.DenseMatrix;
-import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Matrix;
 import no.uib.cipr.matrix.Vector;
 
@@ -41,6 +39,10 @@ public class MatrixBlock implements Serializable {
         return matrix;
     }
 
+    public Vector mult(Vector x) {
+        return mult(1, x);
+    }
+
     /**
      * <code>y = A*x</code>
      *
@@ -48,7 +50,7 @@ public class MatrixBlock implements Serializable {
      *            Vector of size <code>A.numColumns()</code>
      * @return y
      */
-    public Vector mult(Vector x) {
+    public Vector mult(double alpha, Vector x) {
 
         Preconditions.checkArgument(startCol + matrix.numColumns()  <= x.size(),
                 "Vector dimension needs to be at least " + (startCol + matrix.numColumns() + " not " + x.size()));
@@ -61,15 +63,10 @@ public class MatrixBlock implements Serializable {
         VectorSlice res = new VectorSlice(x.copy(), startRow, startRow + matrix.numRows());
 
         // multiply
-        Vector result = matrix.mult(slice, res);
+        Vector result = matrix.mult(alpha, slice, res);
         //Vector result = matrix.mult(slice, new DenseVector(matrix.numRows()));
 
         return res.getVector(); //VectorSlicer.upscale(result, x.size(), startRow);
-    }
-
-    public DenseVectorHolder mult(DenseVectorHolder x) {
-        Vector ret = mult(x.getVector());
-        return new DenseVectorHolder((DenseVector) ret);
     }
 
     @Override
