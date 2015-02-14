@@ -112,7 +112,7 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
 
                 if(!transpose) {
                     reuse.setFields(row, column, matrixEntry);
-                } {
+                } else {
                     reuse.setFields(column, row, matrixEntry);
                 }
                 return reuse;

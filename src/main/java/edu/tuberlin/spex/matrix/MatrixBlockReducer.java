@@ -75,11 +75,8 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple3<Integer, 
         while (peekingIterator.hasNext()) {
             Tuple3<Integer, Integer, Double> value = peekingIterator.next();
             try {
-                // if we row normalize, divide this by the row sum
-                if(rowSums.get(isTransposed ? value.f1 : value.f0) == 0) {
-                    System.out.println();
-                }
 
+                // if we row normalize, divide this by the row sum
                 double matrixEntry = rowNormalize ?
                         value.f2 / rowSums.get(isTransposed ? value.f1 : value.f0)
                         : value.f2;
