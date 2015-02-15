@@ -70,9 +70,9 @@ public class FlinkMatrixReader implements Serializable {
 
         for (Integer blocksize : Lists.newArrayList(1, 2, 4, 8, 16, 32, 64, 128)) {
             DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path("datasets/" + path), -1, n, true)).name("Edge list");
-            //timings.put(blocksize, flinkMatrixReader.executePageRank(env, blocksize, input, n));
+            timings.put(blocksize, flinkMatrixReader.executePageRank(env, blocksize, input, n));
 
-            counts.put(blocksize, flinkMatrixReader.getTheNumberOfSetBlocks(env, blocksize, input, n));
+           // counts.put(blocksize, flinkMatrixReader.getTheNumberOfSetBlocks(env, blocksize, input, n));
         }
 
         for (Map.Entry<Integer, Stopwatch> integerStopwatchEntry : timings.entrySet()) {
