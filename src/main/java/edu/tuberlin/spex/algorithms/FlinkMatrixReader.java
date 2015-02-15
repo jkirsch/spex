@@ -55,11 +55,13 @@ public class FlinkMatrixReader implements Serializable {
         FlinkMatrixReader flinkMatrixReader = new FlinkMatrixReader();
 
         int n = 325729;
-        String path = "webNotreDame.mtx";
+        String path = "webNotreDame.mtx.gz";
 
         if(args.length > 0) {
             path = args[0];
             n = Ints.tryParse(args[1]);
+            Integer degree = Ints.tryParse(args[2]);
+            env.setDegreeOfParallelism(degree);
         }
 
         Map<Integer, Stopwatch> timings = new HashMap<>();
