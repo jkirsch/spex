@@ -55,20 +55,21 @@ public class FlinkMatrixReader implements Serializable {
         FlinkMatrixReader flinkMatrixReader = new FlinkMatrixReader();
 
         int n = 325729;
-        String path = "webNotreDame.mtx.gz";
+        String path = "webNotreDame.mtx";
 
-        if(args.length > 0) {
+        if (args.length > 0) {
             path = args[0];
             n = Ints.tryParse(args[1]);
             Integer degree = Ints.tryParse(args[2]);
             env.setDegreeOfParallelism(degree);
+            LOG.info("Analysing {} with {} nodes using parallelism {}", path, n, degree);
         }
 
         Map<Integer, Stopwatch> timings = new HashMap<>();
         Map<Integer, List<Tuple2<Long, Integer>>> counts = new HashMap<>();
 
-        for (Integer blocksize : Lists.newArrayList(1,2,4,8,16,32,64,128)) {
-            DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path("datasets/"+path), -1, n, true)).name("Edge list");
+        for (Integer blocksize : Lists.newArrayList(1, 2, 4, 8, 16, 32, 64, 128)) {
+            DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path("datasets/" + path), -1, n, true)).name("Edge list");
             //timings.put(blocksize, flinkMatrixReader.executePageRank(env, blocksize, input, n));
 
             counts.put(blocksize, flinkMatrixReader.getTheNumberOfSetBlocks(env, blocksize, input, n));
@@ -94,7 +95,7 @@ public class FlinkMatrixReader implements Serializable {
 
     public List<Tuple2<Long, Integer>> getTheNumberOfSetBlocks(ExecutionEnvironment env, final int blocks, DataSource<Tuple3<Integer, Integer, Double>> input, final int n) throws Exception {
 
-        LOG.info("Counting set blocks for size {} ",blocks);
+        LOG.info("Counting set blocks for size {} ", blocks);
         env.setDegreeOfParallelism(1);
 
         AggregateOperator<Tuple2<Long, Integer>> aggregate = input.map(new MapFunction<Tuple3<Integer, Integer, Double>, Tuple2<Long, Integer>>() {
@@ -164,7 +165,7 @@ public class FlinkMatrixReader implements Serializable {
 
 
         MapOperator<DenseVector, DenseVector> reduce = matrixBlocks.map(new MatrixBlockVectorKernel(alpha)).name("MatrixBlockVectorKernel").withBroadcastSet(iterate, "vector").reduce(new ReduceFunction<DenseVector>() {
-        //MapOperator<DenseVector, DenseVector> reduce = matrixBlockVectorKernel.reduce(new ReduceFunction<DenseVector>() {
+            //MapOperator<DenseVector, DenseVector> reduce = matrixBlockVectorKernel.reduce(new ReduceFunction<DenseVector>() {
             @Override
             public DenseVector reduce(DenseVector vector, DenseVector t1) throws Exception {
                 return (DenseVector) vector.add(t1);
