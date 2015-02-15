@@ -96,7 +96,6 @@ public class FlinkMatrixReader implements Serializable {
     public List<Tuple2<Long, Integer>> getTheNumberOfSetBlocks(ExecutionEnvironment env, final int blocks, DataSource<Tuple3<Integer, Integer, Double>> input, final int n) throws Exception {
 
         LOG.info("Counting set blocks for size {} ", blocks);
-        env.setDegreeOfParallelism(1);
 
         AggregateOperator<Tuple2<Long, Integer>> aggregate = input.map(new MapFunction<Tuple3<Integer, Integer, Double>, Tuple2<Long, Integer>>() {
             MatrixBlockPartitioner matrixBlockPartitioner = new MatrixBlockPartitioner(n, blocks);
