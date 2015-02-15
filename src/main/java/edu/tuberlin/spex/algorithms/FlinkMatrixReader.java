@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Ints;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.matrix.MatrixBlockReducer;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
@@ -55,6 +56,11 @@ public class FlinkMatrixReader implements Serializable {
 
         int n = 325729;
         String path = "webNotreDame.mtx";
+
+        if(args.length > 0) {
+            path = args[0];
+            n = Ints.tryParse(args[1]);
+        }
 
         Map<Integer, Stopwatch> timings = new HashMap<>();
         Map<Integer, List<Tuple2<Long, Integer>>> counts = new HashMap<>();
