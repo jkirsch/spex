@@ -4,6 +4,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
+import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -22,24 +23,26 @@ import static org.junit.Assert.assertThat;
 @RunWith(value = Parameterized.class)
 public class MatrixBlockPartitionerKeyTest {
 
-    @Parameterized.Parameters(name = "{index}: calc({0})")
+    @Parameterized.Parameters(name = "{index}: part({0},{1})")
     public static Iterable<Integer[]> data1() {
         return Arrays.asList(new Integer[][]{
-                {3},
-                {4},
-                {5}
+                {3, 2},
+                {4, 2},
+                {5, 2}
         });
     }
 
     @Parameterized.Parameter(0)
     public int n;
 
+
+    @Parameterized.Parameter(1)
+    public int blocks;
+
     @Test
     public void testPartition() throws Exception {
 
-        System.out.println(Joiner.on(" ").join(Strings.repeat("-",20),n,Strings.repeat("-",20)));
-
-        int blocks = 2;
+        System.out.println(Joiner.on(" ").join(Strings.repeat("-",20),n,"["+blocks+"]",Strings.repeat("-",20)));
 
         MatrixBlockPartitioner matrixBlockPartitioner = new MatrixBlockPartitioner(n, blocks);
 

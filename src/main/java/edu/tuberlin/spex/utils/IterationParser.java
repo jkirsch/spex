@@ -1,9 +1,11 @@
 package edu.tuberlin.spex.utils;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Strings;
 
 import java.io.BufferedReader;
-import java.io.FileReader;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -15,12 +17,15 @@ import java.util.Date;
  * Little stupid util to get the iteration times
  */
 public class IterationParser {
-	public enum STATE {
 
-	}
-	public static void mainReadDelta(String[] args) throws Exception {
+
+    private static String fileName = "log/flink.log";
+
+    public static void mainReadDelta(String[] args) throws Exception {
 		try {
-			BufferedReader br = new BufferedReader(new FileReader("log/flink.log"));
+            BufferedReader br = new BufferedReader(
+                    new InputStreamReader(
+                            new FileInputStream(fileName), Charsets.UTF_8));
 			String line;
 			int iteration = 1;
 
@@ -56,7 +61,9 @@ public class IterationParser {
 	// read bulk
 	public static void main(String[] args) throws Exception {
 		try {
-			BufferedReader br = new BufferedReader(new FileReader("log/flink.log"));
+            BufferedReader br = new BufferedReader(
+                    new InputStreamReader(
+                            new FileInputStream(fileName), Charsets.UTF_8));
 			String line;
 			int iteration = 1;
 

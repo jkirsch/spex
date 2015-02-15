@@ -5,8 +5,8 @@ import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
-import edu.tuberlin.spex.matrix.MatrixBlockPartitioner;
 import edu.tuberlin.spex.matrix.MatrixBlockReducer;
+import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import edu.tuberlin.spex.utils.MatrixBlockVectorKernel;
 import edu.tuberlin.spex.utils.VectorHelper;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
@@ -44,7 +44,7 @@ import java.util.Map;
  */
 public class FlinkMatrixReader implements Serializable {
 
-    Logger LOG = LoggerFactory.getLogger(FlinkMatrixReader.class);
+    static Logger LOG = LoggerFactory.getLogger(FlinkMatrixReader.class);
 
 
     public static void main(String[] args) throws Exception {
@@ -53,22 +53,25 @@ public class FlinkMatrixReader implements Serializable {
 
         FlinkMatrixReader flinkMatrixReader = new FlinkMatrixReader();
 
+        int n = 325729;
+        String path = "webNotreDame.mtx";
+
         Map<Integer, Stopwatch> timings = new HashMap<>();
         Map<Integer, List<Tuple2<Long, Integer>>> counts = new HashMap<>();
 
-        for (Integer blocksize : Lists.newArrayList(1, 2, 4, 8, 16, 32, 64, 128)) {
-            DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path("datasets/webNotreDame.mtx"), -1, 325729, true)).name("Edge list");
-            timings.put(blocksize, flinkMatrixReader.executePageRank(env, blocksize, input, 325729));
+        for (Integer blocksize : Lists.newArrayList(1,2,4,8,16,32,64,128)) {
+            DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path("datasets/"+path), -1, n, true)).name("Edge list");
+            //timings.put(blocksize, flinkMatrixReader.executePageRank(env, blocksize, input, n));
 
-            //counts.put(blocksize, flinkMatrixReader.getTheNumberOfSetBlocks(env, blocksize, input, 325729));
+            counts.put(blocksize, flinkMatrixReader.getTheNumberOfSetBlocks(env, blocksize, input, n));
         }
 
         for (Map.Entry<Integer, Stopwatch> integerStopwatchEntry : timings.entrySet()) {
-            System.out.printf("%2d %s\n", integerStopwatchEntry.getKey(), integerStopwatchEntry.getValue().toString());
+            LOG.info("{} [}", integerStopwatchEntry.getKey(), integerStopwatchEntry.getValue().toString());
         }
 
         for (Map.Entry<Integer, List<Tuple2<Long, Integer>>> integerListEntry : counts.entrySet()) {
-            System.out.printf("%2d %s\n", integerListEntry.getKey(), integerListEntry.getValue().toString());
+            LOG.info("{} [}", integerListEntry.getKey(), integerListEntry.getValue().toString());
         }
 
     }
@@ -143,13 +146,22 @@ public class FlinkMatrixReader implements Serializable {
 
         final IterativeDataSet<DenseVector> iterate = denseVectorDataSource.iterate(100);
 
-        MapOperator<DenseVector, DenseVector> reduce = matrixBlocks.map(new MatrixBlockVectorKernel(alpha)).name("MatrixBlockVectorKernel").withBroadcastSet(iterate, "vector")
-                .reduce(new ReduceFunction<DenseVector>() {
-                    @Override
-                    public DenseVector reduce(DenseVector vector, DenseVector t1) throws Exception {
-                        return (DenseVector) vector.add(t1);
-                    }
-                })
+
+        /*MapOperator<Tuple2<MatrixBlock, DenseVector>, DenseVector> matrixBlockVectorKernel = matrixBlocks.crossWithTiny(iterate).map(new MapFunction<Tuple2<MatrixBlock, DenseVector>, DenseVector>() {
+            @Override
+            public DenseVector map(Tuple2<MatrixBlock, DenseVector> value) throws Exception {
+                return (DenseVector) value.f0.mult(alpha, value.f1);
+            }
+        }).name("MatrixBlockVectorKernel"); */
+
+
+        MapOperator<DenseVector, DenseVector> reduce = matrixBlocks.map(new MatrixBlockVectorKernel(alpha)).name("MatrixBlockVectorKernel").withBroadcastSet(iterate, "vector").reduce(new ReduceFunction<DenseVector>() {
+        //MapOperator<DenseVector, DenseVector> reduce = matrixBlockVectorKernel.reduce(new ReduceFunction<DenseVector>() {
+            @Override
+            public DenseVector reduce(DenseVector vector, DenseVector t1) throws Exception {
+                return (DenseVector) vector.add(t1);
+            }
+        })
                 .map(new RichMapFunction<DenseVector, DenseVector>() {
 
                     public DenseVector old;

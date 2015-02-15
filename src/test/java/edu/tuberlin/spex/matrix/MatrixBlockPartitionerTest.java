@@ -2,6 +2,7 @@ package edu.tuberlin.spex.matrix;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
+import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.junit.Test;
 
@@ -48,9 +49,9 @@ public class MatrixBlockPartitionerTest {
         for (int row = 0; row < n; row++) {
             for (int col = 0; col < n; col++) {
                 MatrixBlockPartitioner.BlockDimensions blockDimensions = MatrixBlockPartitioner.getBlockDimensions(n, blocks, row, col);
-                cols.add(blockDimensions.cols);
-                rows.add(blockDimensions.rows);
-                System.out.print(blockDimensions.rows + "," + blockDimensions.cols + " ");
+                cols.add(blockDimensions.getCols());
+                rows.add(blockDimensions.getRows());
+                System.out.print(blockDimensions.getRows()+ "," + blockDimensions.getCols()+ " ");
             }
             System.out.println();
         }
@@ -67,8 +68,8 @@ public class MatrixBlockPartitionerTest {
 
         MatrixBlockPartitioner.BlockDimensions blockDimensions = MatrixBlockPartitioner.getBlockDimensions(n, blocks, 325728, 325729);
 
-        assertThat(blockDimensions.rowStart, is(325728));
-        assertThat(blockDimensions.colStart, is(325728));
+        assertThat(blockDimensions.getRowStart(), is(325728));
+        assertThat(blockDimensions.getColStart(), is(325728));
 
     }
 
@@ -84,11 +85,11 @@ public class MatrixBlockPartitionerTest {
 
         MatrixBlockPartitioner.BlockDimensions blockDimensions = MatrixBlockPartitioner.getBlockDimensions(n, blockSize, 11285, 11285);
 
-        assertThat(blockDimensions.rowStart, is(0));
-        assertThat(blockDimensions.colStart, is(0));
+        assertThat(blockDimensions.getRowStart(), is(0));
+        assertThat(blockDimensions.getColStart(), is(0));
 
-        assertThat(blockDimensions.rows, is(blockSize));
-        assertThat(blockDimensions.cols, is(blockSize));
+        assertThat(blockDimensions.getRows(), is(blockSize));
+        assertThat(blockDimensions.getCols(), is(blockSize));
 
     }
 }

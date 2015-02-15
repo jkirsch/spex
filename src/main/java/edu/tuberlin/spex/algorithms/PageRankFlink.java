@@ -23,14 +23,13 @@ public class PageRankFlink {
 
     public static void main(String[] args) throws Exception {
 
-        final int numberOfRows = 8;
-        final double c = 0.80;
+        final int numberOfRows = 325729;
+        final double c = 0.85;
 
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-        env.setDegreeOfParallelism(1);
 
 
-        FlatMapOperator<String, Cell> items = env.readTextFile("datasets/smallTest.csv").flatMap(new RichFlatMapFunction<String, Cell>() {
+        FlatMapOperator<String, Cell> items = env.readTextFile("datasets/webNotreDame.mtx").flatMap(new RichFlatMapFunction<String, Cell>() {
             @Override
             public void flatMap(String value, Collector<Cell> out) throws Exception {
 
@@ -136,7 +135,7 @@ public class PageRankFlink {
         });
 
         aggregate.print();
-        cellDataSet.print();
+        //cellDataSet.print();
 
         System.out.println(env.getExecutionPlan());
 

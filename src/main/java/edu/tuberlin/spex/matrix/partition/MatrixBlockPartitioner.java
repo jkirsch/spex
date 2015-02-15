@@ -1,4 +1,4 @@
-package edu.tuberlin.spex.matrix;
+package edu.tuberlin.spex.matrix.partition;
 
 import com.google.common.base.Preconditions;
 import org.apache.flink.api.java.functions.KeySelector;

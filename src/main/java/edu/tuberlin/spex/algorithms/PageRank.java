@@ -84,7 +84,7 @@ public class PageRank {
         CompDiagMatrix diagMatrix = new CompDiagMatrix(input.numRows(), input.numColumns());
 
         Vector rowSums = input.mult(rowSummer, rowSummer.copy());
-        Vector colSums = input.transMult(rowSummer, rowSummer.copy());
+        //Vector colSums = input.transMult(rowSummer, rowSummer.copy());
 
         Vector dangling = new SparseVector(rowSummer.size());
 
