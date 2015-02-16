@@ -100,7 +100,7 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
             try {
                 int row = scanner.nextInt() + indexOffset;
                 int column = scanner.nextInt() + indexOffset;
-                double matrixEntry = scanner.nextDouble();
+                double matrixEntry = scanner.hasNextDouble() ? scanner.nextDouble() : 1;
 
                 if(row - indexOffset == size) {
                     // this element is the matrix size -- skip it
