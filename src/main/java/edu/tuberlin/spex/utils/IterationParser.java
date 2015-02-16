@@ -8,6 +8,7 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 
 /**
@@ -43,7 +44,7 @@ public class IterationParser {
 				// find last iteration end
 				if(line.contains("done in iteration ["+iteration+"]")) {
 				//	System.err.println("found end");
-					iterationEnd = getDate(line);
+					iterationEnd = getDate(line, iterationStart);
 					long duration = iterationEnd.getTime() - iterationStart.getTime();
 					System.err.println(iteration+","+ duration);
 					iteration++;
@@ -82,7 +83,7 @@ public class IterationParser {
 				// find last iteration end
 				if(line.contains("finishing iteration ["+(iteration)+"]")) {
 					//	System.err.println("found end");
-					iterationEnd = getDate(line);
+					iterationEnd = getDate(line, iterationStart);
 					long duration = iterationEnd.getTime() - iterationStart.getTime();
 					System.err.println(iteration+" , "+ duration);
 					iteration++;
@@ -101,10 +102,22 @@ public class IterationParser {
 		}
 	}
 
+    private static Date getDate(String line) throws ParseException {
+        String[] sp = line.split(" ");
+        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
+        return sdf.parse(sp[0]);
+    }
 
-	private static Date getDate(String line) throws ParseException {
-		String[] sp = line.split(" ");
-		SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
-		return sdf.parse(sp[0]);
+	private static Date getDate(String line, Date iterationStart) throws ParseException {
+        Date parse = getDate(line);
+        // do we have a roundtrip ?
+        if(parse.getTime() < iterationStart.getTime()) {
+            // add a day to parse
+            Calendar c = Calendar.getInstance();
+            c.setTime(parse);
+            c.add(Calendar.DATE, 1);
+            parse = c.getTime();
+        }
+        return parse;
 	}
 }
