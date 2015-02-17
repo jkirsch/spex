@@ -1,6 +1,9 @@
 package edu.tuberlin.spex.utils.io;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Splitter;
+import com.google.common.collect.Lists;
+import com.google.common.primitives.Doubles;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.io.DelimitedInputFormat;
 import org.apache.flink.api.java.tuple.Tuple3;
@@ -9,8 +12,8 @@ import org.apache.flink.core.fs.Path;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
-import java.util.Locale;
-import java.util.Scanner;
+import java.util.ArrayList;
+import java.util.regex.Pattern;
 
 /**
  * Date: 29.01.2015
@@ -82,6 +85,8 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
 
     }
 
+    private static Pattern WHITESPACE_PATTERN = Pattern.compile("[\\s]+");
+
     @Override
     public Tuple3<Integer, Integer, Double> readRecord(Tuple3<Integer, Integer, Double> reuse, byte[] bytes, int offset, int numBytes) throws IOException {
 
@@ -95,12 +100,16 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
         String value = new String(bytes, offset, numBytes, this.charsetName);
 
         if (!StringUtils.isEmpty(value) && !StringUtils.startsWithAny(value, "//", "%")) {
-            Scanner scanner = new Scanner(value);
-            scanner.useLocale(Locale.ENGLISH);
+            ArrayList<String> splitted = Lists.newArrayList(Splitter.on(WHITESPACE_PATTERN).trimResults().split(value.trim()));
             try {
-                int row = scanner.nextInt() + indexOffset;
-                int column = scanner.nextInt() + indexOffset;
-                double matrixEntry = scanner.hasNextDouble() ? scanner.nextDouble() : 1;
+                int row = Integer.parseInt(splitted.get(0)) + indexOffset;
+                int column = Integer.parseInt(splitted.get(1)) + indexOffset;
+                double matrixEntry;
+                if(splitted.size() == 3) {
+                    matrixEntry = Doubles.tryParse(splitted.get(2));
+                } else {
+                    matrixEntry = 1;
+                }
 
                 if(row - indexOffset == size) {
                     // this element is the matrix size -- skip it

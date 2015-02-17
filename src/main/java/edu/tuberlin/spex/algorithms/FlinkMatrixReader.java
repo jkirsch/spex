@@ -68,7 +68,7 @@ public class FlinkMatrixReader implements Serializable {
         Map<Integer, Stopwatch> timings = new HashMap<>();
         Map<Integer, List<Tuple2<Long, Integer>>> counts = new HashMap<>();
 
-        for (Integer blocksize : Lists.newArrayList(1, 2, 4, 8, 16, 32, 64, 128)) {
+        for (Integer blocksize : Lists.newArrayList(1,2,4,8,16,32)){;//1, 2, 4, 8, 16, 32, 64, 128)) {
             DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path("datasets/" + path), -1, n, true)).name("Edge list");
             timings.put(blocksize, flinkMatrixReader.executePageRank(env, blocksize, input, n));
 
@@ -76,11 +76,11 @@ public class FlinkMatrixReader implements Serializable {
         }
 
         for (Map.Entry<Integer, Stopwatch> integerStopwatchEntry : timings.entrySet()) {
-            LOG.info("{} [}", integerStopwatchEntry.getKey(), integerStopwatchEntry.getValue().toString());
+            LOG.info("{} {}", integerStopwatchEntry.getKey(), integerStopwatchEntry.getValue().toString());
         }
 
         for (Map.Entry<Integer, List<Tuple2<Long, Integer>>> integerListEntry : counts.entrySet()) {
-            LOG.info("{} [}", integerListEntry.getKey(), integerListEntry.getValue().toString());
+            LOG.info("{} {}", integerListEntry.getKey(), integerListEntry.getValue().toString());
         }
 
     }

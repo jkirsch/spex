@@ -8,8 +8,7 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
+import java.util.*;
 
 /**
  *
@@ -72,6 +71,11 @@ public class IterationParser {
 			Date iterationEnd = null;
 			//	long iterationStart = 0;
 
+            int global = 0;
+            int maxIt = 0;
+
+            Map<Integer,List<Long>> parsed = new HashMap<>();
+
 			while ((line = br.readLine()) != null) {
 				// System.err.println("line = "+line);
 				if(!line.contains("Bulk")) continue;
@@ -88,18 +92,43 @@ public class IterationParser {
 					System.err.println(iteration+" , "+ duration);
 					iteration++;
 					iterationStart = null;
-				}
+                    List<Long> integers = parsed.get(global);
+                    if(integers == null) {
+                        integers = new ArrayList<>();
+                        parsed.put(global, integers);
+                    }
+                    integers.add(duration);
+                    maxIt = Math.max(maxIt, iteration);
+                }
                 if(line.contains("switched to FINISHED")) {
                     // reset
+                    if(iteration > 1) global++;
                     iteration=1;
                     System.err.println(Strings.repeat("--", 50));
                 }
 			}
 			br.close();
+
+            maxIt--;
+            for (int i = 0; i < maxIt; i++) {
+                System.err.print(i+1 + " ");
+                for (int pos = 0; pos < global; pos++) {
+                    if(parsed.get(pos).size() > i) {
+                        System.err.print(parsed.get(pos).get(i) + ",");
+                    } else {
+                        System.err.println(" ,");
+                    }
+                }
+                System.err.println();
+            }
+
+
 		} catch (Throwable t) {
 			System.err.println("ex : "+t.getMessage());
 			t.printStackTrace();
 		}
+
+
 	}
 
     private static Date getDate(String line) throws ParseException {

@@ -10,6 +10,7 @@ setwd("/Work/code/spex/src/R")
 
 # Load data
 notre = readMM("./../../datasets/webNotreDame.mtx");
+notre = readMM("./../../datasets/webBerkStan.mtx");
 
 #image(notre)
 
@@ -59,6 +60,7 @@ stanford = readMM("./../../datasets/webBerkStan.mtx");
 image(stanford)
 
 image(stanford[, order(-colSums(stanford))])
+image(notre[, order(-colSums(notre))])
 
 png("image.png")
 # plot
