@@ -2,7 +2,6 @@ package edu.tuberlin.spex.utils;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
@@ -124,7 +123,7 @@ public class IterationParser {
 					//	System.err.println("found end");
 					iterationEnd = getDate(line, iterationStart);
 					long duration = iterationEnd.getTime() - iterationStart.getTime();
-					System.err.println(iteration+" , "+ duration);
+					//System.err.println(iteration+" , "+ duration);
 					iteration++;
 					iterationStart = null;
                     List<Long> integers = parsed.get(global);
@@ -140,20 +139,25 @@ public class IterationParser {
                     // reset
                     if(iteration > 1) global++;
                     iteration=1;
-                    System.err.println(Strings.repeat("--", 50));
+                    //System.err.println(Strings.repeat("--", 50));
 
                 }
 			}
+            if(state == States.START_ITERATION) {
+                // last teration is not finished yet
+                global++;
+
+            }
 			br.close();
 
             maxIt--;
             for (int i = 0; i < maxIt; i++) {
                 System.err.print(i+1 + " \t ");
                 for (int pos = 0; pos < global; pos++) {
-                    if(parsed.get(pos).size() > i) {
+                    if(parsed.size() > pos && parsed.get(pos).size() > i) {
                         System.err.print(parsed.get(pos).get(i) + ",");
                     } else {
-                        System.err.println(" ,");
+                        System.err.print(" ,");
                     }
                 }
                 System.err.println();

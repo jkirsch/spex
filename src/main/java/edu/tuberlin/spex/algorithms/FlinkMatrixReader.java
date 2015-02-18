@@ -13,8 +13,6 @@ import edu.tuberlin.spex.utils.VectorHelper;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Vector;
-import no.uib.cipr.matrix.VectorEntry;
-import no.uib.cipr.matrix.sparse.SparseVector;
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.functions.MapFunction;
@@ -32,10 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Date: 09.02.2015
@@ -66,7 +61,7 @@ public class FlinkMatrixReader implements Serializable {
         Map<Integer, Stopwatch> timings = new HashMap<>();
         Map<Integer, List<Tuple2<Long, Integer>>> counts = new HashMap<>();
 
-        for (Integer blocksize : Lists.newArrayList(1,2,4,8,16,32,64,128)){;//1, 2, 4, 8, 16, 32, 64, 128))
+        for (Integer blocksize : Lists.newArrayList(2)){;//1, 2, 4, 8, 16, 32, 64, 128))
             DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path("datasets/" + path), -1, n, true)).name("Edge list");
             timings.put(blocksize, flinkMatrixReader.executePageRank(env, blocksize, input, n));
 
@@ -91,7 +86,7 @@ public class FlinkMatrixReader implements Serializable {
         return (int) l;
     }
 
-    public List<Tuple2<Long, Integer>> getTheNumberOfSetBlocks(ExecutionEnvironment env, final int blocks, DataSource<Tuple3<Integer, Integer, Double>> input, final int n) throws Exception {
+    public List<Tuple2<Long, Integer>> getTheNumberOfSetBlocks(ExecutionEnvironment env, final int blocks, DataSet<Tuple3<Integer, Integer, Double>> input, final int n) throws Exception {
 
         LOG.info("Counting set blocks for size {} ", blocks);
 
@@ -120,23 +115,23 @@ public class FlinkMatrixReader implements Serializable {
         AggregateOperator<Tuple2<Integer, Double>> colSumsDataSet = input.<Tuple2<Integer, Double>>project(1, 2).name("Select column id").groupBy(0).aggregate(Aggregations.SUM, 1).name("Calculate ColSums");
 
         // transform the aggregated sums into a vector which is 1 for all non entries
-        GroupReduceOperator<Tuple2<Integer, Double>, SparseVector> personalizationVector = colSumsDataSet.reduceGroup(new GroupReduceFunction<Tuple2<Integer, Double>, SparseVector>() {
+        GroupReduceOperator<Tuple2<Integer, Double>, BitSet> personalizationVector = colSumsDataSet.reduceGroup(new GroupReduceFunction<Tuple2<Integer, Double>, BitSet>() {
             @Override
-            public void reduce(Iterable<Tuple2<Integer, Double>> values, Collector<SparseVector> out) throws Exception {
-                SparseVector personalizationVector = new SparseVector(VectorHelper.ones(n));
-                /*BitSet bitSet = new BitSet(n);
+            public void reduce(Iterable<Tuple2<Integer, Double>> values, Collector<BitSet> out) throws Exception {
+                //SparseVector personalizationVector = new SparseVector(VectorHelper.ones(n));
+                BitSet bitSet = new BitSet(n);
                 for (Tuple2<Integer, Double> entry : values) {
                     bitSet.set(entry.f0);
-                }                                            */
-                for (Tuple2<Integer, Double> entry : values) {
-                    personalizationVector.set(entry.f0, 0);
                 }
-                personalizationVector.compact();
+                //for (Tuple2<Integer, Double> entry : values) {
+                //    personalizationVector.set(entry.f0, 0);
+                //}
+                //personalizationVector.compact();
                 // revert to get the ones that are dangling
-                // bitSet.flip(0, n);
+                 bitSet.flip(0, n);
 
                 //out.collect(personalizationVector);
-                out.collect(personalizationVector);
+                out.collect(bitSet);
             }
         }).name("Build personalization Vector");
 
@@ -160,17 +155,19 @@ public class FlinkMatrixReader implements Serializable {
             }
         }).name("MatrixBlockVectorKernel"); */
 
-        MapOperator<Tuple2<DenseVector, SparseVector>, Double> personalization = iterate.crossWithTiny(personalizationVector).map(new MapFunction<Tuple2<DenseVector, SparseVector>, Double>() {
+        MapOperator<Tuple2<DenseVector, BitSet>, Double> personalization = iterate.crossWithTiny(personalizationVector).map(new MapFunction<Tuple2<DenseVector, BitSet>, Double>() {
             @Override
-            public Double map(Tuple2<DenseVector, SparseVector> value) throws Exception {
+            public Double map(Tuple2<DenseVector, BitSet> value) throws Exception {
                 double sum = 0;
                 double scale = (1 - alpha) / (double) n;
-                       /* for (int i = pV.nextSetBit(0); i != -1; i = pV.nextSetBit(i + 1)) {
-                            sum += old.get(i);
-                        } */
-                for (VectorEntry vectorEntry : value.f1) {
-                    sum += value.f0.get(vectorEntry.index()) * vectorEntry.get();
+                BitSet pV = value.f1;
+                DenseVector old = value.f0;
+                for (int i = pV.nextSetBit(0); i != -1; i = pV.nextSetBit(i + 1)) {
+                    sum += old.get(i);
                 }
+                //for (VectorEntry vectorEntry : value.f1) {
+                //    sum += value.f0.get(vectorEntry.index()) * vectorEntry.get();
+                //}
 
                 double persAdd = alpha * sum / (double) n;
 
