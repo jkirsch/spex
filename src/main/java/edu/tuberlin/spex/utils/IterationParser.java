@@ -1,9 +1,15 @@
 package edu.tuberlin.spex.utils;
 
 import com.google.common.base.Charsets;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.io.Files;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.text.ParseException;
@@ -71,7 +77,7 @@ public class IterationParser {
             BufferedReader br = new BufferedReader(
                     new InputStreamReader(
                             new FileInputStream(fileName), Charsets.UTF_8));
-			String line;
+
 			int iteration = 1;
 
 			Date iterationStart = null;
@@ -83,17 +89,38 @@ public class IterationParser {
 
             Map<Integer,List<Long>> parsed = new HashMap<>();
 
-			while ((line = br.readLine()) != null) {
-				// System.err.println("line = "+line);
-				if(!line.contains("Bulk")) continue;
+            List<String> lines = Files.readLines(new File(fileName), Charsets.UTF_8);
+            // now filter the lines
+            Iterable<String> filter = Iterables.filter(lines, new Predicate<String>() {
+                @Override
+                public boolean apply(String input) {
+                    return  StringUtils.contains(input, "Bulk") &&
+                            (StringUtils.contains(input, "starting iteration [")
+                            || StringUtils.contains(input, "finishing iteration [")
+                            || StringUtils.contains(input, "switched to FINISHED"));
+                }
+            });
+
+            List<String> arrayList = Lists.newArrayList(filter);
+
+
+            for (int pos = 0; pos < arrayList.size(); pos++) {
+                String line = arrayList.get(pos);
+
 				// find first iteration start
 				if (iterationStart == null && line.contains("starting iteration [" + iteration + "]") && state == States.NONE) {
 					//	System.err.println("found start");
 					iterationStart = getDate(line);
                     state = States.START_ITERATION;
 				}
-				// find last iteration end
 				if(line.contains("finishing iteration ["+(iteration)+"]") && state == States.START_ITERATION) {
+
+                    // find last iteration end
+                    while (pos+1 < arrayList.size() && arrayList.get(pos+1).contains("finishing iteration ["+(iteration)+"]"))  {
+                        pos++;
+                        line = arrayList.get(pos);
+                    }
+
 					//	System.err.println("found end");
 					iterationEnd = getDate(line, iterationStart);
 					long duration = iterationEnd.getTime() - iterationStart.getTime();
