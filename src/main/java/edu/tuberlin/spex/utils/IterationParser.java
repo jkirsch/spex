@@ -18,6 +18,11 @@ import java.util.*;
  */
 public class IterationParser {
 
+    enum States {
+        START_ITERATION,
+        NONE,
+    }
+
 
     private static String fileName = "log/flink.log";
 
@@ -57,6 +62,8 @@ public class IterationParser {
 		}
 	}
 
+    private static States state = States.NONE;
+
 
 	// read bulk
 	public static void main(String[] args) throws Exception {
@@ -80,12 +87,13 @@ public class IterationParser {
 				// System.err.println("line = "+line);
 				if(!line.contains("Bulk")) continue;
 				// find first iteration start
-				if (iterationStart == null && line.contains("starting iteration [" + iteration + "]")) {
+				if (iterationStart == null && line.contains("starting iteration [" + iteration + "]") && state == States.NONE) {
 					//	System.err.println("found start");
 					iterationStart = getDate(line);
+                    state = States.START_ITERATION;
 				}
 				// find last iteration end
-				if(line.contains("finishing iteration ["+(iteration)+"]")) {
+				if(line.contains("finishing iteration ["+(iteration)+"]") && state == States.START_ITERATION) {
 					//	System.err.println("found end");
 					iterationEnd = getDate(line, iterationStart);
 					long duration = iterationEnd.getTime() - iterationStart.getTime();
@@ -99,19 +107,21 @@ public class IterationParser {
                     }
                     integers.add(duration);
                     maxIt = Math.max(maxIt, iteration);
+                    state = States.NONE;
                 }
                 if(line.contains("switched to FINISHED")) {
                     // reset
                     if(iteration > 1) global++;
                     iteration=1;
                     System.err.println(Strings.repeat("--", 50));
+
                 }
 			}
 			br.close();
 
             maxIt--;
             for (int i = 0; i < maxIt; i++) {
-                System.err.print(i+1 + " ");
+                System.err.print(i+1 + " \t ");
                 for (int pos = 0; pos < global; pos++) {
                     if(parsed.get(pos).size() > i) {
                         System.err.print(parsed.get(pos).get(i) + ",");
