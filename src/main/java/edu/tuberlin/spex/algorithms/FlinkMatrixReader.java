@@ -19,7 +19,6 @@ import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
-import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.aggregation.Aggregations;
@@ -27,7 +26,6 @@ import org.apache.flink.api.java.io.LocalCollectionOutputFormat;
 import org.apache.flink.api.java.operators.*;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
@@ -68,7 +66,7 @@ public class FlinkMatrixReader implements Serializable {
         Map<Integer, Stopwatch> timings = new HashMap<>();
         Map<Integer, List<Tuple2<Long, Integer>>> counts = new HashMap<>();
 
-        for (Integer blocksize : Lists.newArrayList(1,2,4,8,16,32)){;//1, 2, 4, 8, 16, 32, 64, 128)) {
+        for (Integer blocksize : Lists.newArrayList(2)){;//1, 2, 4, 8, 16, 32, 64, 128))
             DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path("datasets/" + path), -1, n, true)).name("Edge list");
             timings.put(blocksize, flinkMatrixReader.executePageRank(env, blocksize, input, n));
 
@@ -162,54 +160,42 @@ public class FlinkMatrixReader implements Serializable {
             }
         }).name("MatrixBlockVectorKernel"); */
 
+        MapOperator<Tuple2<DenseVector, SparseVector>, Double> personalization = iterate.crossWithTiny(personalizationVector).map(new MapFunction<Tuple2<DenseVector, SparseVector>, Double>() {
+            @Override
+            public Double map(Tuple2<DenseVector, SparseVector> value) throws Exception {
+                double sum = 0;
+                double scale = (1 - alpha) / (double) n;
+                       /* for (int i = pV.nextSetBit(0); i != -1; i = pV.nextSetBit(i + 1)) {
+                            sum += old.get(i);
+                        } */
+                for (VectorEntry vectorEntry : value.f1) {
+                    sum += value.f0.get(vectorEntry.index()) * vectorEntry.get();
+                }
 
-        MapOperator<DenseVector, DenseVector> reduce = matrixBlocks.map(new MatrixBlockVectorKernel(alpha)).name("MatrixBlockVectorKernel").withBroadcastSet(iterate, "vector").reduce(new ReduceFunction<DenseVector>() {
+                double persAdd = alpha * sum / (double) n;
+
+                return persAdd + scale;
+            }
+        });
+
+        MapOperator<Tuple2<DenseVector, Double>, DenseVector> reduce = matrixBlocks.map(new MatrixBlockVectorKernel(alpha)).name("MatrixBlockVectorKernel").withBroadcastSet(iterate, "vector").reduce(new ReduceFunction<DenseVector>() {
             //MapOperator<DenseVector, DenseVector> reduce = matrixBlockVectorKernel.reduce(new ReduceFunction<DenseVector>() {
             @Override
             public DenseVector reduce(DenseVector vector, DenseVector t1) throws Exception {
                 return (DenseVector) vector.add(t1);
             }
-        })
-                .map(new RichMapFunction<DenseVector, DenseVector>() {
+        }).returns("no.uib.cipr.matrix.DenseVector").crossWithTiny(personalization).map(new MapFunction<Tuple2<DenseVector, Double>, DenseVector>() {
+            @Override
+            public DenseVector map(Tuple2<DenseVector, Double> value) throws Exception {
+                double[] data = value.f0.getData();
 
-                    public DenseVector old;
-                    public SparseVector pV;
+                for (int i = 0; i < data.length; i++) {
+                    data[i] = data[i] + value.f1;
+                }
 
-                    @Override
-                    public void open(Configuration parameters) throws Exception {
-                        pV = (SparseVector)
-                                Iterables.getOnlyElement(getRuntimeContext().getBroadcastVariable("personalizationVector"));
-
-                        old = (DenseVector)
-                                Iterables.getOnlyElement(getRuntimeContext().getBroadcastVariable("vector"));
-                    }
-
-                    @Override
-                    public DenseVector map(DenseVector value) throws Exception {
-
-                        double[] data = value.getData();
-                        double scale = (1 - alpha) / (double) n;
-
-                        // computer personalization add - for dangling nodes
-                        double sum = 0;
-
-                       /* for (int i = pV.nextSetBit(0); i != -1; i = pV.nextSetBit(i + 1)) {
-                            sum += old.get(i);
-                        } */
-                        for (VectorEntry vectorEntry : pV) {
-                            sum += old.get(vectorEntry.index()) * vectorEntry.get();
-                        }
-
-                        double persAdd = alpha * sum / (double) n;
-
-                        double adder = persAdd + scale;
-
-                        for (int i = 0; i < data.length; i++) {
-                            data[i] = data[i] + adder;
-                        }
-                        return value;
-                    }
-                }).withBroadcastSet(personalizationVector, "personalizationVector").withBroadcastSet(iterate, "vector").name("Calculate next vector");
+                return value.f0;
+            }
+        }).returns("java.lang.Double").name("Calculate next vector");
 
         DataSet<DenseVector> result = iterate.closeWith(reduce);
 
