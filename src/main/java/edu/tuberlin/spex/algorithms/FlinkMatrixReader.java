@@ -112,7 +112,7 @@ public class FlinkMatrixReader implements Serializable {
         return resultCollector;
     }
 
-    public Stopwatch executePageRank(ExecutionEnvironment env, int blocks, DataSource<Tuple3<Integer, Integer, Double>> input, final int n) throws Exception {
+    public Stopwatch executePageRank(ExecutionEnvironment env, int blocks, DataSet<Tuple3<Integer, Integer, Double>> input, final int n) throws Exception {
         final boolean transpose = true;
 
         final double alpha = 0.85;
