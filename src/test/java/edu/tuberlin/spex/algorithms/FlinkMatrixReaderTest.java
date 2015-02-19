@@ -3,6 +3,7 @@ package edu.tuberlin.spex.algorithms;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
+import edu.tuberlin.spex.algorithms.domain.VectorBlock;
 import edu.tuberlin.spex.matrix.MatrixBlockReducer;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import edu.tuberlin.spex.utils.MatrixBlockVectorKernel;
@@ -169,7 +170,7 @@ public class FlinkMatrixReaderTest {
     private List<Tuple3<Integer, Integer, Double>> createKnownMatrix(int n, boolean transpose) {
 
         // recreate the matrix from
-        // http://de.wikipedia.org/wiki/Google-Matrix#cite_note-1
+        // http://de.wikipedia.org/wiki/Google-Matrix#Beispiel
 
         List<Tuple3<Integer, Integer, Double>> list = Lists.newArrayList();
 
@@ -193,6 +194,54 @@ public class FlinkMatrixReaderTest {
         System.out.println(m);
 
         return list;
+
+    }
+
+    @Test
+    public void testExecute() throws Exception {
+        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+        env.setDegreeOfParallelism(1);
+
+        final double alpha = 0.80;
+        final int n = 8;
+
+
+        boolean tranpose = true;
+
+        DataSource<Tuple3<Integer, Integer, Double>> input = env.fromCollection(createKnownMatrix(n, tranpose));
+
+        FlinkMatrixReader flinkMatrixReader = new FlinkMatrixReader();
+
+        for (int b = 1; b < n; b++) {
+            final int blocks = b;
+            FlinkMatrixReader.TimingResult timingResult = flinkMatrixReader.executePageRank(env, alpha, blocks, input, n, 100);
+            DenseVector p_k1 = new DenseVector(n);
+
+            for (VectorBlock vectorBlock : timingResult.vectorBlocks) {
+                for (VectorEntry entry : vectorBlock.getVector()) {
+                    if(p_k1.size() > entry.index() + vectorBlock.getStartRow()) {
+                        p_k1.set(entry.index() + vectorBlock.getStartRow(), entry.get());
+                    }
+                }
+            }
+
+            Assert.assertThat(p_k1.norm(Vector.Norm.One), closeTo(1, 0.00001));
+            Assert.assertThat(p_k1.get(0), closeTo(0.0675, 0.0001));
+            Assert.assertThat(p_k1.get(1), closeTo(0.0701, 0.0001));
+            Assert.assertThat(p_k1.get(2), closeTo(0.0934, 0.0001));
+            Assert.assertThat(p_k1.get(3), closeTo(0.0768, 0.0001));
+            Assert.assertThat(p_k1.get(4), closeTo(0.0768, 0.0001));
+            Assert.assertThat(p_k1.get(5), closeTo(0.0675, 0.0001));
+            Assert.assertThat(p_k1.get(6), closeTo(0.2825, 0.0001));
+            Assert.assertThat(p_k1.get(7), closeTo(0.2654, 0.0001));
+
+
+        }
+
+
+
+
+
 
     }
 }

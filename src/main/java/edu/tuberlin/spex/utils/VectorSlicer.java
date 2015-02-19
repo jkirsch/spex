@@ -1,4 +1,4 @@
-package edu.tuberlin.spex.algorithms.domain;
+package edu.tuberlin.spex.utils;
 
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Vector;

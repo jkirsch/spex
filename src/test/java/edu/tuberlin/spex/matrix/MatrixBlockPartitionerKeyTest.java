@@ -58,7 +58,7 @@ public class MatrixBlockPartitionerKeyTest {
         }
 
         assertThat(counter.count(0L), is((n / blocks) * (n / blocks)));
-        assertThat(counter.count(3L), is((n / blocks) * (n / blocks)));
+        assertThat(counter.count(3L), is((n / blocks) * (n / blocks) + (n%2==0?0:(2*(n / blocks)+1))));
 
     }
 

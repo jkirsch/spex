@@ -6,6 +6,8 @@ import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.junit.Test;
 
+import java.util.List;
+
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
@@ -30,8 +32,10 @@ public class MatrixBlockPartitionerTest {
             System.out.println();
         }
 
+        List<MatrixBlockPartitioner.BlockDimensions> blockDimensionses = matrixBlockPartitioner.computeRowSizes();
+
         assertThat(counter.count(0L), is((n / blocks) * (n / blocks)));
-        assertThat(counter.count(3L), is((n / blocks) * (n / blocks)));
+        assertThat(counter.count(3L), is((n / blocks) * (n / blocks) + n));
 
     }
 
@@ -63,13 +67,38 @@ public class MatrixBlockPartitionerTest {
     @Test
     public void testDimensionsCorrect() throws Exception {
 
-        final int n = 325729 + 1;
-        final int blocks = 4;
+        int n = 325729;
+        final int blocks = 2;
 
-        MatrixBlockPartitioner.BlockDimensions blockDimensions = MatrixBlockPartitioner.getBlockDimensions(n, blocks, 325728, 325729);
+        MatrixBlockPartitioner.BlockDimensions dims = MatrixBlockPartitioner.getBlockDimensions(n, n / blocks, 325728, 162864);
 
-        assertThat(blockDimensions.getRowStart(), is(325728));
-        assertThat(blockDimensions.getColStart(), is(325728));
+        assertThat(dims.getRowStart(), is(325728));
+        assertThat(dims.getColStart(), is(162864));
+        assertThat(dims.getRows(), is(1));
+        assertThat(dims.getCols(), is(n - 162864 -1));
+
+
+        dims = MatrixBlockPartitioner.getBlockDimensions(n, n / blocks, 325727, 325728);
+
+        System.out.println(dims);
+
+        for (n = 2; n < 100000; n++) {
+            MatrixBlockPartitioner matrixBlockPartitioner = new MatrixBlockPartitioner(n, blocks);
+            List<MatrixBlockPartitioner.BlockDimensions> blockDimensions = matrixBlockPartitioner.computeRowSizes();
+
+
+            for (MatrixBlockPartitioner.BlockDimensions blockDimension : blockDimensions) {
+
+                dims = MatrixBlockPartitioner.getBlockDimensions(n, n / blocks, blockDimension.getRowStart(), blockDimension.getColStart());
+                assertThat(dims.getRowStart(), is(blockDimension.getRowStart()));
+                assertThat(dims.getColStart(), is(blockDimension.getColStart()));
+
+            }
+
+        }
+
+
+
 
     }
 
@@ -90,6 +119,28 @@ public class MatrixBlockPartitionerTest {
 
         assertThat(blockDimensions.getRows(), is(blockSize));
         assertThat(blockDimensions.getCols(), is(blockSize));
+
+    }
+
+    @Test
+    public void testComputeRowSizes() throws Exception {
+
+        int blocks = 2;
+
+        for (int n = 2; n <= 325729; n++) {
+            MatrixBlockPartitioner matrixBlockPartitioner = new MatrixBlockPartitioner(n, blocks);
+
+            List<MatrixBlockPartitioner.BlockDimensions> dimensions = matrixBlockPartitioner.computeRowSizes();
+            assertThat(n + " " + dimensions.toString(), dimensions.size(), is(2));
+
+            int sum = 0;
+            for (MatrixBlockPartitioner.BlockDimensions dimension : dimensions) {
+                sum += dimension.getRows();
+                assertThat("n:" + n, dimension.getRowStart() + dimension.getRows() <= n, is(true));
+            }
+
+            assertThat(n + " " + dimensions.toString(), sum, is(n));
+        }
 
     }
 }

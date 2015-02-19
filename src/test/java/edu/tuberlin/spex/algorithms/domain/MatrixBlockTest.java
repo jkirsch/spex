@@ -19,11 +19,11 @@ public class MatrixBlockTest {
 
         DenseVector ones = VectorHelper.ones(matrix.numColumns());
 
-        Vector mult = matrixBlock.mult(ones);
+        Vector mult = matrixBlock.multRealigned(ones);
         System.out.println(matrix.transMult(ones, ones.copy()));
 
         matrix.transpose();
-        mult = matrixBlock.mult(ones);
+        mult = matrixBlock.multRealigned(ones);
         System.out.println(mult);
 
     }

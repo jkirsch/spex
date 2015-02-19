@@ -1,10 +1,12 @@
 package edu.tuberlin.spex;
 
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
+import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import edu.tuberlin.spex.utils.VectorHelper;
 import no.uib.cipr.matrix.DenseMatrix;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Vector;
+import org.apache.flink.api.java.tuple.Tuple3;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -44,9 +46,9 @@ public class MatrixMultiplicationTest {
         System.out.println(matrixBlock3);
         System.out.println(matrixBlock4);
 
-        Vector mult1 = matrixBlock1.mult(ones);
-        Vector mult3 = matrixBlock3.mult(ones);
-        Vector mult4 = matrixBlock4.mult(ones);
+        Vector mult1 = matrixBlock1.multRealigned(ones);
+        Vector mult3 = matrixBlock3.multRealigned(ones);
+        Vector mult4 = matrixBlock4.multRealigned(ones);
 
         // result obtained my adding all vectors together
         Vector blockWise = mult1.add(mult3).add(mult4);
@@ -57,5 +59,21 @@ public class MatrixMultiplicationTest {
 
     }
 
+    @Test
+    public void testSmallMatrix() throws Exception {
+        int n = 5;
+        DenseMatrix matrix = new DenseMatrix(n, n);
 
+        MatrixBlockPartitioner matrixBlockPartitioner = new MatrixBlockPartitioner(n, 2);
+
+        for (int row = 0; row < n; row++) {
+            for (int col = 0; col < n; col++) {
+                matrix.set(row, col, matrixBlockPartitioner.getKey(new Tuple3<Integer, Integer, Double>(row, col, 1d)));
+            }
+
+        }
+
+        System.out.println(matrix);
+
+    }
 }

@@ -14,8 +14,8 @@ import java.io.Serializable;
  */
 public class MatrixBlock implements Serializable {
 
-    int startRow;
-    int startCol;
+    public int startRow;
+    public int startCol;
 
     Matrix matrix;
 
@@ -39,9 +39,22 @@ public class MatrixBlock implements Serializable {
         return matrix;
     }
 
-    public Vector mult(Vector x) {
-        return mult(1, x);
+    public Vector multRealigned(Vector x) {
+        return multRealigned(1, x);
     }
+
+    public Vector mult(double alpha, Vector x) {
+
+        return matrix.mult(alpha, x, x.copy());
+
+    }
+
+    public Vector mult(Vector x) {
+
+        return matrix.mult(x, x.copy());
+
+    }
+
 
     /**
      * <code>y = A*x</code>
@@ -50,7 +63,7 @@ public class MatrixBlock implements Serializable {
      *            Vector of size <code>A.numColumns()</code>
      * @return y
      */
-    public Vector mult(double alpha, Vector x) {
+    public Vector multRealigned(double alpha, Vector x) {
 
         Preconditions.checkArgument(startCol + matrix.numColumns()  <= x.size(),
                 "Vector dimension needs to be at least " + (startCol + matrix.numColumns() + " not " + x.size()));

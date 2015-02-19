@@ -2,14 +2,13 @@ package edu.tuberlin.spex.algorithms;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
+import edu.tuberlin.spex.algorithms.domain.VectorBlock;
 import edu.tuberlin.spex.matrix.MatrixBlockReducer;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
-import edu.tuberlin.spex.utils.MatrixBlockVectorKernel;
-import edu.tuberlin.spex.utils.VectorHelper;
+import edu.tuberlin.spex.utils.VectorBlockHelper;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Vector;
@@ -48,6 +47,7 @@ public class FlinkMatrixReader implements Serializable {
         FlinkMatrixReader flinkMatrixReader = new FlinkMatrixReader();
 
         int n = 325729;
+        double alpha = 0.85;
         String path = "webNotreDame.mtx";
 
         if (args.length > 0) {
@@ -61,11 +61,12 @@ public class FlinkMatrixReader implements Serializable {
         Map<Integer, Stopwatch> timings = new HashMap<>();
         Map<Integer, List<Tuple2<Long, Integer>>> counts = new HashMap<>();
 
-        for (Integer blocksize : Lists.newArrayList(2)){;//1, 2, 4, 8, 16, 32, 64, 128))
+        for (Integer blocksize : Lists.newArrayList(4)){;//1, 2, 4, 8, 16, 32, 64, 128))
             DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path("datasets/" + path), -1, n, true)).name("Edge list");
-            timings.put(blocksize, flinkMatrixReader.executePageRank(env, blocksize, input, n));
+            TimingResult timingResult = flinkMatrixReader.executePageRank(env, alpha, blocksize, input, n, 100);
+            timings.put(blocksize, timingResult.stopwatch);
 
-           // counts.put(blocksize, flinkMatrixReader.getTheNumberOfSetBlocks(env, blocksize, input, n));
+            //counts.put(blocksize, flinkMatrixReader.getTheNumberOfSetBlocks(env, blocksize, input, n));
         }
 
         for (Map.Entry<Integer, Stopwatch> integerStopwatchEntry : timings.entrySet()) {
@@ -107,10 +108,10 @@ public class FlinkMatrixReader implements Serializable {
         return resultCollector;
     }
 
-    public Stopwatch executePageRank(ExecutionEnvironment env, int blocks, DataSet<Tuple3<Integer, Integer, Double>> input, final int n) throws Exception {
+    public TimingResult executePageRank(ExecutionEnvironment env, final double alpha, final int blocks, DataSet<Tuple3<Integer, Integer, Double>> input, final int n, final int iteration) throws Exception {
         final boolean transpose = true;
 
-        final double alpha = 0.85;
+        final int adjustedN = n % blocks > 0?n + (blocks - n % blocks):n;
 
         AggregateOperator<Tuple2<Integer, Double>> colSumsDataSet = input.<Tuple2<Integer, Double>>project(1, 2).name("Select column id").groupBy(0).aggregate(Aggregations.SUM, 1).name("Calculate ColSums");
 
@@ -135,17 +136,20 @@ public class FlinkMatrixReader implements Serializable {
             }
         }).name("Build personalization Vector");
 
-        UnsortedGrouping<Tuple3<Integer, Integer, Double>> tuple3UnsortedGrouping = input.groupBy(new MatrixBlockPartitioner(n, blocks));
+        UnsortedGrouping<Tuple3<Integer, Integer, Double>> tuple3UnsortedGrouping = input.groupBy(new MatrixBlockPartitioner(adjustedN, blocks));
 
         GroupReduceOperator<Tuple3<Integer, Integer, Double>, MatrixBlock> matrixBlocks = tuple3UnsortedGrouping.
-                reduceGroup(new MatrixBlockReducer(n, blocks, true, transpose)).withBroadcastSet(colSumsDataSet, "rowSums").name("Build Matrix Blocks");
+                reduceGroup(new MatrixBlockReducer(adjustedN, blocks, true, transpose)).withBroadcastSet(colSumsDataSet, "rowSums").name("Build Matrix Blocks");
 
         // now multiply the matrixblocks with the vector
 
-        DataSource<DenseVector> denseVectorDataSource = env.fromElements(
-                VectorHelper.identical(n, 1 / (double) n));
+        //DataSource<DenseVector> denseVectorDataSource = env.fromElements(
+        //        VectorHelper.identical(n, 1 / (double) n));
 
-        final IterativeDataSet<DenseVector> iterate = denseVectorDataSource.iterate(100);
+
+        DataSource<VectorBlock> denseVectorDataSource = env.fromCollection(VectorBlockHelper.createBlocks(adjustedN, blocks, 1 / (double) n));
+
+        final IterativeDataSet<VectorBlock> iterate = denseVectorDataSource.iterate(iteration);
 
 
         /*MapOperator<Tuple2<MatrixBlock, DenseVector>, DenseVector> matrixBlockVectorKernel = matrixBlocks.crossWithTiny(iterate).map(new MapFunction<Tuple2<MatrixBlock, DenseVector>, DenseVector>() {
@@ -155,27 +159,80 @@ public class FlinkMatrixReader implements Serializable {
             }
         }).name("MatrixBlockVectorKernel"); */
 
-        MapOperator<Tuple2<DenseVector, BitSet>, Double> personalization = iterate.crossWithTiny(personalizationVector).map(new MapFunction<Tuple2<DenseVector, BitSet>, Double>() {
+        MapOperator<Double, Double> personalization = iterate.crossWithTiny(personalizationVector).map(new MapFunction<Tuple2<VectorBlock, BitSet>, Double>() {
             @Override
-            public Double map(Tuple2<DenseVector, BitSet> value) throws Exception {
+            public Double map(Tuple2<VectorBlock, BitSet> value) throws Exception {
                 double sum = 0;
                 double scale = (1 - alpha) / (double) n;
-                BitSet pV = value.f1;
-                DenseVector old = value.f0;
-                for (int i = pV.nextSetBit(0); i != -1; i = pV.nextSetBit(i + 1)) {
+                //BitSet complete = value.f1;
+                BitSet complete = value.f1;
+                //DenseVector old = value.f0;
+                VectorBlock old = value.f0;
+/*                for (int i = pV.nextSetBit(0); i != -1; i = pV.nextSetBit(i + 1)) {
                     sum += old.get(i);
-                }
+                }*/
                 //for (VectorEntry vectorEntry : value.f1) {
                 //    sum += value.f0.get(vectorEntry.index()) * vectorEntry.get();
                 //}
 
-                double persAdd = alpha * sum / (double) n;
+                DenseVector vector = old.getVector();
+                // cut out the bitset of interest
+                BitSet pV = complete.get(old.getStartRow(), old.getStartRow() + vector.size());
 
-                return persAdd + scale;
+                for (int i = pV.nextSetBit(0); i != -1; i = pV.nextSetBit(i + 1)) {
+                    sum += vector.get(i);
+                }
+
+
+                //double persAdd = alpha * sum / (double) n;
+                //return persAdd + scale;
+                return sum;
+            }
+        }).reduce(new ReduceFunction<Double>() {
+            @Override
+            public Double reduce(Double value1, Double value2) throws Exception {
+                return value1 + value2;
+            }
+        }).map(new MapFunction<Double, Double>() {
+            @Override
+            public Double map(Double sum) throws Exception {
+                double scale = (1 - alpha) / (double) n;
+                return alpha * sum / (double) n + scale;
             }
         });
 
-        MapOperator<Tuple2<DenseVector, Double>, DenseVector> reduce = matrixBlocks.map(new MatrixBlockVectorKernel(alpha)).name("MatrixBlockVectorKernel").withBroadcastSet(iterate, "vector").reduce(new ReduceFunction<DenseVector>() {
+        //MapOperator<Tuple2<DenseVector, Double>, DenseVector> reduce = matrixBlocks.crossWithTiny(iterate).map(new MatrixBlockVectorKernelCross(alpha)).name("MatrixBlockVectorKernel")
+
+        MapOperator<Tuple2<VectorBlock, Double>, VectorBlock> reduce = matrixBlocks.joinWithTiny(iterate).where("startCol").equalTo("startRow").map(new MapFunction<Tuple2<MatrixBlock, VectorBlock>, VectorBlock>() {
+            @Override
+            public VectorBlock map(Tuple2<MatrixBlock, VectorBlock> value) throws Exception {
+                return new VectorBlock(value.f0.getStartRow(), (DenseVector) value.f0.mult(value.f1.getVector()));
+            }
+        }).groupBy("startRow").reduce(new ReduceFunction<VectorBlock>() {
+            @Override
+            public VectorBlock reduce(VectorBlock value1, VectorBlock value2) throws Exception {
+                return new VectorBlock(value1.getStartRow(), (DenseVector) value1.getVector().add(value2.getVector()));
+            }
+        }).crossWithTiny(personalization).map(new MapFunction<Tuple2<VectorBlock, Double>, VectorBlock>() {
+            @Override
+            public VectorBlock map(Tuple2<VectorBlock, Double> value) throws Exception {
+                double[] data = value.f0.getVector().getData();
+
+                // if this is the last block which is "extended" don't change any value below the cutoff
+                int limit = data.length;
+                if(value.f0.getStartRow() + value.f0.getVector().size() > n) {
+                    limit = n - (blocks - n % blocks) - value.f0.getStartRow();
+                }
+                for (int i = 0; i < limit; i++) {
+                    data[i] = alpha * data[i] + value.f1;
+                }
+
+                return value.f0;
+            }
+        }).name("Calculate next vector");;
+
+       /* MapOperator<Tuple2<DenseVector, Double>, DenseVector> reduce = matrixBlocks.map(new MatrixBlockVectorKernel(alpha)).name("MatrixBlockVectorKernel").withBroadcastSet(iterate, "vector")
+                .reduce(new ReduceFunction<DenseVector>() {
             //MapOperator<DenseVector, DenseVector> reduce = matrixBlockVectorKernel.reduce(new ReduceFunction<DenseVector>() {
             @Override
             public DenseVector reduce(DenseVector vector, DenseVector t1) throws Exception {
@@ -192,11 +249,11 @@ public class FlinkMatrixReader implements Serializable {
 
                 return value.f0;
             }
-        }).returns("java.lang.Double").name("Calculate next vector");
+        }).name("Calculate next vector");              */
 
-        DataSet<DenseVector> result = iterate.closeWith(reduce);
+        DataSet<VectorBlock> result = iterate.closeWith(reduce);
 
-        List<DenseVector> resultCollector = new ArrayList<>();
+        List<VectorBlock> resultCollector = new ArrayList<>();
         result.output(new LocalCollectionOutputFormat<>(resultCollector));
 
         String executionPlan = env.getExecutionPlan();
@@ -208,15 +265,28 @@ public class FlinkMatrixReader implements Serializable {
         stopwatch.stop();
 
         System.out.println(stopwatch);
+        double sum = 0;
+        for (VectorBlock vectorBlock : resultCollector) {
+            sum += vectorBlock.getVector().norm(Vector.Norm.One);
+        }
 
-        DenseVector p_k1 = Iterables.getOnlyElement(resultCollector);
-        System.out.println(p_k1.norm(Vector.Norm.One));
+        System.out.println(sum);
         //System.out.println(p_k1);
 
-        Preconditions.checkArgument((Math.abs((p_k1.norm(Vector.Norm.One) - 1)) - 0.00001) <= 0.0);
+        Preconditions.checkArgument((Math.abs(sum - 1) - 0.01) <= 0.0,"Overall sum not within bounds " + sum);
 
-        return stopwatch;
+        return new TimingResult(resultCollector, stopwatch);
 
+    }
+
+    public static class TimingResult {
+        List<VectorBlock> vectorBlocks;
+        Stopwatch stopwatch;
+
+        public TimingResult(List<VectorBlock> vectorBlocks, Stopwatch stopwatch) {
+            this.vectorBlocks = vectorBlocks;
+            this.stopwatch = stopwatch;
+        }
     }
 
 }

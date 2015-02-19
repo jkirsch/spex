@@ -4,6 +4,9 @@ import com.google.common.base.Preconditions;
 import org.apache.flink.api.java.functions.KeySelector;
 import org.apache.flink.api.java.tuple.Tuple3;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Date: 09.02.2015
  * Time: 22:56
@@ -22,14 +25,14 @@ public class MatrixBlockPartitioner implements KeySelector<Tuple3<Integer, Integ
     public MatrixBlockPartitioner(int n, int blocks) {
 
        // Preconditions.checkArgument(blocks % 2 == 0, "Blocks needs to be a factor of two");
-        Preconditions.checkArgument(n >= blocks, "The matrix needs to be at least the size of the block");
+        Preconditions.checkArgument(n >= blocks, "The square matrix needs to have at least the number of block rows");
 
         this.n = n;
         this.blocks = blocks;
         blockSize = n / blocks;
 
-        // how many blocks per row
-        m = n / blockSize + n % blockSize;
+        // how many rows per blocks
+        m = n / blockSize;// + n % blockSize;
     }
 
 
@@ -39,7 +42,34 @@ public class MatrixBlockPartitioner implements KeySelector<Tuple3<Integer, Integ
         long row = value.f0 / blockSize;
         long column = value.f1 / blockSize;
 
-        return row * m  + column;
+        long rowIndex;
+        long colIndex;
+        if(value.f0 >= blockSize * blocks) {
+            rowIndex = blocks;
+        } else {
+            rowIndex = row * blocks;
+        }
+        if(value.f1 >= blockSize * blocks) {
+          column =  blocks -1;
+        }
+
+        return rowIndex  + column;
+    }
+
+
+    /**
+     * Computes the sizes for the different needed vectors for the given partition
+     * @return
+     */
+    public List<BlockDimensions> computeRowSizes() {
+        // blocksize
+        List<BlockDimensions> sizes = new ArrayList<>();
+        for (int i = 0; i < blocks -1; i++){
+            sizes.add(new BlockDimensions(i * blockSize, 0, blockSize, 1));
+        }
+        // take care of the last
+        sizes.add(new BlockDimensions((blocks -1)* blockSize, 0, n - blockSize * (blocks -1), 1));
+        return sizes;
     }
 
     /**
