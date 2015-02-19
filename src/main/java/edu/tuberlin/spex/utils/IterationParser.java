@@ -1,17 +1,13 @@
 package edu.tuberlin.spex.utils;
 
 import com.google.common.base.Charsets;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.io.Files;
+import com.google.common.io.LineProcessor;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -87,23 +83,31 @@ public class IterationParser {
 
             Map<Integer, List<Long>> parsed = new HashMap<>();
 
-            List<String> lines = Files.readLines(new File(fileName), Charsets.UTF_8);
-            // now filter the lines
-            Iterable<String> filter = Iterables.filter(lines, new Predicate<String>() {
+            final List<String> lines = Files.readLines(new File(fileName), Charsets.UTF_8, new LineProcessor<List<String>>() {
+                List<String> arrayList = Lists.newArrayList();
+
                 @Override
-                public boolean apply(String input) {
-                    return StringUtils.contains(input, "Bulk") &&
+                public boolean processLine(String input) throws IOException {
+                    // now filter the lines
+                    if (StringUtils.contains(input, "Bulk") &&
                             (StringUtils.contains(input, "starting iteration [")
                                     || StringUtils.contains(input, "finishing iteration [")
-                                    || StringUtils.contains(input, "switched to FINISHED"));
+                                    || StringUtils.contains(input, "switched to FINISHED"))) {
+
+                        arrayList.add(input);
+
+                    }
+                    return true;
+                }
+
+                @Override
+                public List<String> getResult() {
+                    return arrayList;
                 }
             });
 
-            List<String> arrayList = Lists.newArrayList(filter);
-
-
-            for (int pos = 0; pos < arrayList.size(); pos++) {
-                String line = arrayList.get(pos);
+            for (int pos = 0; pos < lines.size(); pos++) {
+                String line = lines.get(pos);
 
                 // find first iteration start
                 if (iterationStart == null && line.contains("starting iteration [" + iteration + "]") && state == States.NONE) {
@@ -114,9 +118,9 @@ public class IterationParser {
                 if (line.contains("finishing iteration [" + (iteration) + "]") && state == States.START_ITERATION) {
 
                     // find last iteration end
-                    while (pos + 1 < arrayList.size() && arrayList.get(pos + 1).contains("finishing iteration [" + (iteration) + "]")) {
+                    while (pos + 1 < lines.size() && lines.get(pos + 1).contains("finishing iteration [" + (iteration) + "]")) {
                         pos++;
-                        line = arrayList.get(pos);
+                        line = lines.get(pos);
                     }
 
                     //	System.err.println("found end");

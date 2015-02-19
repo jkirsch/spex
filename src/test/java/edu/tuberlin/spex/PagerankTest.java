@@ -7,7 +7,6 @@ import com.google.common.io.CharStreams;
 import com.google.common.io.LineProcessor;
 import com.google.common.primitives.Ints;
 import edu.tuberlin.spex.algorithms.PageRank;
-import edu.tuberlin.spex.algorithms.Reordering;
 import edu.tuberlin.spex.utils.CompressionHelper;
 import edu.tuberlin.spex.utils.Datasets;
 import edu.tuberlin.spex.utils.MatrixMarketWriter;
@@ -16,7 +15,6 @@ import no.uib.cipr.matrix.Vector;
 import no.uib.cipr.matrix.sparse.*;
 import org.apache.commons.math3.random.EmpiricalDistribution;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
-import org.junit.Assert;
 import org.junit.Assume;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -38,8 +36,6 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static org.hamcrest.core.Is.is;
-
 /**
  * Date: 11.01.2015
  * Time: 00:41
@@ -54,13 +50,13 @@ public class PagerankTest {
     @Parameterized.Parameters(name = "{index}: Dataset {0}")
     public static Collection<Datasets.GRAPHS> data() {
         return Arrays.asList(
-                Datasets.GRAPHS.dblp,
-                Datasets.GRAPHS.webBerkStan,
-                Datasets.GRAPHS.webStanford,
-                Datasets.GRAPHS.webNotreDame
+                ///Datasets.GRAPHS.dblp,
+                //Datasets.GRAPHS.webBerkStan,
+                //Datasets.GRAPHS.webStanford,
+                //Datasets.GRAPHS.webNotreDame
                 //Datasets.GRAPHS.patents,
                 //Datasets.GRAPHS.youtTube,
-                //Datasets.GRAPHS.liveJournal
+                Datasets.GRAPHS.liveJournal
              );
     }
 
@@ -140,19 +136,19 @@ public class PagerankTest {
 
 
         // build picture
-        createImage(readAdjacency, dataset, max_scaled_size, "normal");
+        //createImage(readAdjacency, dataset, max_scaled_size, "normal");
 
-        Matrix orderByRowSumMatrix = Reordering.orderByRowSum(readAdjacency);
-        Matrix orderByColumnSumMatrix = Reordering.orderByColumnSum(readAdjacency);
+        //Matrix orderByRowSumMatrix = Reordering.orderByRowSum(readAdjacency);
+        //Matrix orderByColumnSumMatrix = Reordering.orderByColumnSum(readAdjacency);
 
         // check that we are not distorting the matrix
-        Assert.assertThat(orderByRowSumMatrix.norm(Matrix.Norm.Frobenius), is(readAdjacency.norm(Matrix.Norm.Frobenius)));
-        Assert.assertThat(orderByColumnSumMatrix.norm(Matrix.Norm.Frobenius), is(readAdjacency.norm(Matrix.Norm.Frobenius)));
+        //Assert.assertThat(orderByRowSumMatrix.norm(Matrix.Norm.Frobenius), is(readAdjacency.norm(Matrix.Norm.Frobenius)));
+        //Assert.assertThat(orderByColumnSumMatrix.norm(Matrix.Norm.Frobenius), is(readAdjacency.norm(Matrix.Norm.Frobenius)));
 
         // build picture
-        createImage(orderByRowSumMatrix, dataset, max_scaled_size, "sortedByRow");
+        //createImage(orderByRowSumMatrix, dataset, max_scaled_size, "sortedByRow");
 
-        createImage(orderByColumnSumMatrix, dataset, max_scaled_size, "sortedByColumn");
+        //createImage(orderByColumnSumMatrix, dataset, max_scaled_size, "sortedByColumn");
 
         File file = new File("datasets", dataset.name() + ".mtx");
         MatrixMarketWriter.write(readAdjacency, file);
