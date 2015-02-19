@@ -50,13 +50,13 @@ public class PagerankTest {
     @Parameterized.Parameters(name = "{index}: Dataset {0}")
     public static Collection<Datasets.GRAPHS> data() {
         return Arrays.asList(
-                ///Datasets.GRAPHS.dblp,
-                //Datasets.GRAPHS.webBerkStan,
-                //Datasets.GRAPHS.webStanford,
-                //Datasets.GRAPHS.webNotreDame
+                Datasets.GRAPHS.dblp,
+                Datasets.GRAPHS.webBerkStan,
+                Datasets.GRAPHS.webStanford,
+                Datasets.GRAPHS.webNotreDame
                 //Datasets.GRAPHS.patents,
                 //Datasets.GRAPHS.youtTube,
-                Datasets.GRAPHS.liveJournal
+                //Datasets.GRAPHS.liveJournal
              );
     }
 
