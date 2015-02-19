@@ -2,7 +2,6 @@ package edu.tuberlin.spex.algorithms;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
@@ -12,6 +11,7 @@ import edu.tuberlin.spex.utils.VectorBlockHelper;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Vector;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.functions.MapFunction;
@@ -50,18 +50,26 @@ public class FlinkMatrixReader implements Serializable {
         double alpha = 0.85;
         String path = "webNotreDame.mtx";
 
+        int[] blockSizes = new int[] {1,2,4,8,16,32,64,128};
+
         if (args.length > 0) {
             path = args[0];
             n = Ints.tryParse(args[1]);
             Integer degree = Ints.tryParse(args[2]);
+            String[] indices = ArrayUtils.subarray(args, 3, args.length);
+            blockSizes = new int[indices.length];
+            for (int i = 0; i < indices.length; i++) {
+                String index = indices[i];
+                blockSizes[i] = Ints.tryParse(index);
+            }
             env.setDegreeOfParallelism(degree);
             LOG.info("Analysing {} with {} nodes using parallelism {}", path, n, degree);
         }
 
-        Map<Integer, Stopwatch> timings = new HashMap<>();
+        Map<Integer, Stopwatch> timings = new TreeMap<>();
         Map<Integer, List<Tuple2<Long, Integer>>> counts = new HashMap<>();
 
-        for (Integer blocksize : Lists.newArrayList(1, 2, 4, 8, 16, 32, 64, 128)) {
+        for (Integer blocksize : blockSizes) {
             DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path("datasets/" + path), -1, n, true)).name("Edge list");
             TimingResult timingResult = flinkMatrixReader.executePageRank(env, alpha, blocksize, input, n, 100);
             timings.put(blocksize, timingResult.stopwatch);
