@@ -64,11 +64,11 @@ public class MatrixBlockPartitioner implements KeySelector<Tuple3<Integer, Integ
     public List<BlockDimensions> computeRowSizes() {
         // blocksize
         List<BlockDimensions> sizes = new ArrayList<>();
-        for (int i = 0; i < blocks -1; i++){
+        for (int i = 0; i < blocks - 1; i++) {
             sizes.add(new BlockDimensions(i * blockSize, 0, blockSize, 1));
         }
         // take care of the last
-        sizes.add(new BlockDimensions((blocks -1)* blockSize, 0, n - blockSize * (blocks -1), 1));
+        sizes.add(new BlockDimensions((blocks - 1) * blockSize, 0, n - blockSize * (blocks - 1), 1));
         return sizes;
     }
 

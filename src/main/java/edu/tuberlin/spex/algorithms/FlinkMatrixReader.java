@@ -221,7 +221,7 @@ public class FlinkMatrixReader implements Serializable {
                 // if this is the last block which is "extended" don't change any value below the cutoff
                 int limit = data.length;
                 if(value.f0.getStartRow() + value.f0.getVector().size() > n) {
-                    limit = n - (blocks - n % blocks) - value.f0.getStartRow();
+                    limit = (int) (n % Math.ceil(n / (double) blocks));
                 }
                 for (int i = 0; i < limit; i++) {
                     data[i] = alpha * data[i] + value.f1;
@@ -273,7 +273,7 @@ public class FlinkMatrixReader implements Serializable {
         System.out.println(sum);
         //System.out.println(p_k1);
 
-        Preconditions.checkArgument((Math.abs(sum - 1) - 0.01) <= 0.0,"Overall sum not within bounds " + sum);
+        Preconditions.checkArgument((Math.abs(sum - 1) - 0.00001) <= 0.0,String.format("Overall sum not within bounds %1.5f n=%d b=%d",sum,n,blocks));
 
         return new TimingResult(resultCollector, stopwatch);
 
