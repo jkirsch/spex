@@ -14,7 +14,8 @@ import java.util.*;
 
 /**
  *
- * Taken from https://github.com/project-flink/flink-perf/blob/master/flink-jobs/src/main/java/com/github/projectflink/utils/IterationParser.java
+ * Taken and adapted from
+ * https://github.com/project-flink/flink-perf/blob/master/flink-jobs/src/main/java/com/github/projectflink/utils/IterationParser.java
  *
  * Little stupid util to get the iteration times
  */

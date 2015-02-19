@@ -219,6 +219,7 @@ public class FlinkMatrixReader implements Serializable {
         }).groupBy("startRow").reduce(new ReduceFunction<VectorBlock>() {
             @Override
             public VectorBlock reduce(VectorBlock value1, VectorBlock value2) throws Exception {
+                if (value2 == null) return value1;
                 return new VectorBlock(value1.getStartRow(), (DenseVector) value1.getVector().add(value2.getVector()));
             }
         }).crossWithTiny(personalization).map(new MapFunction<Tuple2<VectorBlock, Double>, VectorBlock>() {
