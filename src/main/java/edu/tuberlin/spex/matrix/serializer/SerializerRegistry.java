@@ -17,12 +17,12 @@ public class SerializerRegistry {
     public static void register(ExecutionEnvironment env) {
 
         // Register Serializer
-        env.addDefaultKryoSerializer(DenseMatrix.class, new DenseMatrixSerializer());
-        env.addDefaultKryoSerializer(LinkedSparseMatrix.class, new LinkedSparseMatrixSerializer());
-        env.addDefaultKryoSerializer(AdaptedCompRowMatrix.class, new AdaptedCompRowMatrixSerializer());
-        env.addDefaultKryoSerializer(AdaptedCompColMatrix.class, new AdaptedCompColMatrixSerializer());
-        env.addDefaultKryoSerializer(DenseVector.class, new DenseVectorSerializer());
-        env.addDefaultKryoSerializer(SparseVector.class, new SparseVectorSerializer());
+        env.addDefaultKryoSerializer(DenseMatrix.class, DenseMatrixSerializer.class);
+        env.addDefaultKryoSerializer(LinkedSparseMatrix.class, LinkedSparseMatrixSerializer.class);
+        env.addDefaultKryoSerializer(AdaptedCompRowMatrix.class, AdaptedCompRowMatrixSerializer.class);
+        env.addDefaultKryoSerializer(AdaptedCompColMatrix.class, AdaptedCompColMatrixSerializer.class);
+        env.addDefaultKryoSerializer(DenseVector.class, DenseVectorSerializer.class);
+        env.addDefaultKryoSerializer(SparseVector.class, SparseVectorSerializer.class);
 
     }
 }

@@ -141,6 +141,20 @@ public class MatrixBlockPartitionerTest {
 
             assertThat(n + " " + dimensions.toString(), sum, is(n));
         }
+    }
+
+    @Test
+    public void testComputeRowSizesLarge() throws Exception {
+        int n = 3997962;
+        int blocks = 256;
+
+        final int adjustedN = n % blocks > 0?n + (blocks - n % blocks):n;
+
+        MatrixBlockPartitioner matrixBlockPartitioner = new MatrixBlockPartitioner(adjustedN, blocks);
+        List<MatrixBlockPartitioner.BlockDimensions> blockDimensionses = matrixBlockPartitioner.computeRowSizes();
+
+        System.out.println();
+
 
     }
 }
