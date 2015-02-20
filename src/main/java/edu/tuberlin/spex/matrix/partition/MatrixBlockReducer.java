@@ -1,17 +1,18 @@
 package edu.tuberlin.spex.matrix.partition;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
 import no.uib.cipr.matrix.DenseVector;
-import no.uib.cipr.matrix.sparse.LinkedSparseMatrix;
 import org.apache.flink.api.common.functions.RichGroupReduceFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
 
+import java.util.Iterator;
 import java.util.List;
 
 /**
@@ -65,14 +66,42 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple3<Integer, 
         int blockSize = n / blocks;
 
         // calculate the beginning end row/col of the block
-        MatrixBlockPartitioner.BlockDimensions blockDimensions
+        final MatrixBlockPartitioner.BlockDimensions blockDimensions
                 = MatrixBlockPartitioner.getBlockDimensions(n, blockSize, peek.f0, peek.f1);
 
-        LinkedSparseMatrix matrix = new LinkedSparseMatrix(blockDimensions.getRows(),
-                blockDimensions.getCols());
+        /*LinkedSparseMatrix matrix = new LinkedSparseMatrix(blockDimensions.getRows(),
+                blockDimensions.getCols());*/
+
+        // we also assume that the tuples are ordered
+        // first by row followed by column
+
+        // build the array information
+
+        Iterator<Tuple3<Integer, Integer, Double>> transform = Iterators.transform(peekingIterator, new Function<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>>() {
+            @Override
+            public Tuple3<Integer, Integer, Double> apply(Tuple3<Integer, Integer, Double> value) {
+
+                // if we row normalize, divide this by the row sum
+                double matrixEntry = rowNormalize ?
+                        value.f2 / rowSums.get(isTransposed ? value.f1 : value.f0)
+                        : value.f2;
+
+                value.f0 -= blockDimensions.getRowStart();
+                value.f1 -= blockDimensions.getColStart();
+                value.f2 = matrixEntry;
+
+                return value;
+            }
+        });
+
+        AdaptedCompRowMatrix matrix = AdaptedCompRowMatrix.buildFromSortedIterator(transform, blockDimensions.rows, blockDimensions.cols);
+        MatrixBlock matrixBlock = new MatrixBlock(blockDimensions.getRowStart(), blockDimensions.getColStart(), matrix);
+
+
+
         // get the row offset
         // get the column offset
-        while (peekingIterator.hasNext()) {
+ /*       while (peekingIterator.hasNext()) {
             Tuple3<Integer, Integer, Double> value = peekingIterator.next();
             try {
 
@@ -80,6 +109,10 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple3<Integer, 
                 double matrixEntry = rowNormalize ?
                         value.f2 / rowSums.get(isTransposed ? value.f1 : value.f0)
                         : value.f2;
+
+                if(matrix.get(value.f0 - blockDimensions.getRowStart(), value.f1 - blockDimensions.getColStart()) > 0) {
+                    System.err.println("Setting existing value " + value.toString());
+                }
 
                 matrix.set(value.f0 - blockDimensions.getRowStart(), value.f1 - blockDimensions.getColStart(), matrixEntry);
             } catch (java.lang.IndexOutOfBoundsException e) {
@@ -92,7 +125,7 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple3<Integer, 
         MatrixBlock matrixBlock = new MatrixBlock(
                 blockDimensions.getRowStart(),
                 blockDimensions.getColStart(),
-                new AdaptedCompRowMatrix(matrix));
+                new AdaptedCompRowMatrix(matrix));*/
 
         out.collect(matrixBlock);
     }

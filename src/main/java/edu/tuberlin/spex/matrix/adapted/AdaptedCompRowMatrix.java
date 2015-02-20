@@ -20,11 +20,14 @@
 
 package edu.tuberlin.spex.matrix.adapted;
 
+import com.google.common.base.Preconditions;
 import no.uib.cipr.matrix.*;
 import no.uib.cipr.matrix.Vector;
 import no.uib.cipr.matrix.io.MatrixInfo;
 import no.uib.cipr.matrix.io.MatrixSize;
 import no.uib.cipr.matrix.io.MatrixVectorReader;
+import org.apache.commons.lang.ArrayUtils;
+import org.apache.flink.api.java.tuple.Tuple3;
 
 import java.io.IOException;
 import java.util.*;
@@ -159,6 +162,21 @@ public class AdaptedCompRowMatrix extends AbstractMatrix {
         construct(nz);
     }
 
+    /**
+     * Constructor for CompRowMatrix
+     *
+     * @param numRows
+     *            Number of rows
+     * @param numColumns
+     *            Number of columns
+     * @param nz
+     *            The nonzero column indices on each row
+     */
+    public AdaptedCompRowMatrix(int numRows, int numColumns, int[][] nz, double[] data) {
+        super(numRows, numColumns);
+        construct(nz, data);
+    }
+
     private void construct(int[][] nz) {
         int nnz = 0;
         for (int i = 0; i < nz.length; ++i)
@@ -167,6 +185,33 @@ public class AdaptedCompRowMatrix extends AbstractMatrix {
         rowPointer = new int[numRows + 1];
         columnIndex = new int[nnz];
         data = new double[nnz];
+
+        if (nz.length != numRows)
+            throw new IllegalArgumentException("nz.length != numRows");
+
+        for (int i = 1; i <= numRows; ++i) {
+            rowPointer[i] = rowPointer[i - 1] + nz[i - 1].length;
+
+            for (int j = rowPointer[i - 1], k = 0; j < rowPointer[i]; ++j, ++k) {
+                columnIndex[j] = nz[i - 1][k];
+                if (nz[i - 1][k] < 0 || nz[i - 1][k] >= numColumns)
+                    throw new IllegalArgumentException("nz[" + (i - 1) + "]["
+                            + k + "]=" + nz[i - 1][k]
+                            + ", which is not a valid column index");
+            }
+
+            Arrays.sort(columnIndex, rowPointer[i - 1], rowPointer[i]);
+        }
+    }
+
+    private void construct(int[][] nz, double[] data) {
+        int nnz = 0;
+        for (int i = 0; i < nz.length; ++i)
+            nnz += nz[i].length;
+
+        rowPointer = new int[numRows + 1];
+        columnIndex = new int[nnz];
+        this.data = data;
 
         if (nz.length != numRows)
             throw new IllegalArgumentException("nz.length != numRows");
@@ -558,6 +603,39 @@ public class AdaptedCompRowMatrix extends AbstractMatrix {
         public void set(double value) {
             data[cursor] = value;
         }
+    }
+
+    public static AdaptedCompRowMatrix buildFromSortedIterator(Iterator<Tuple3<Integer, Integer, Double>> values, int rows, int cols) {
+        List<Double> data = new ArrayList<>();
+
+        int lastRow = -1;
+
+        // The nonzero column indices on each row
+        int[][] nnz = new int[rows][0];
+        ArrayList<Object> colIndicies = new ArrayList<>();
+
+        while (values.hasNext()) {
+            Tuple3<Integer, Integer, Double> value = values.next();
+            data.add(value.f2);
+
+            if(value.f0 > lastRow && lastRow > -1) {
+                Preconditions.checkArgument(lastRow < value.f0, "We need a sorted list");
+                // flush last row
+               nnz[lastRow] = ArrayUtils.toPrimitive(colIndicies.toArray(new Integer[colIndicies.size()]));
+               colIndicies.clear();
+            }
+
+            colIndicies.add(value.f1);
+            lastRow = value.f0;
+        }
+
+        nnz[lastRow] = ArrayUtils.toPrimitive(colIndicies.toArray(new Integer[colIndicies.size()]));
+
+        AdaptedCompRowMatrix constructed = new AdaptedCompRowMatrix(rows, cols, nnz);
+        constructed.data = ArrayUtils.toPrimitive(data.toArray(new Double[data.size()]));
+
+        return constructed;
+
     }
 
 }

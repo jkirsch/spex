@@ -36,12 +36,11 @@ public class ParseBlockDistributionTest {
         Collections.sort(lines, Ordering.natural().nullsLast().onResultOf(new Function<String, Comparable>() {
             @Override
             public Comparable apply(String line) {
-                Integer size = null;
                 Matcher yep = matches.matcher(line);
                 if (yep.find()) {
-                    size = Ints.tryParse(yep.group(1));
+                    return Ints.tryParse(yep.group(1));
                 }
-                return size;
+                return null;
             }
         }));
 
