@@ -1,4 +1,4 @@
-package edu.tuberlin.spex.matrix.io.adapted;
+package edu.tuberlin.spex.matrix.adapted;
 
 import no.uib.cipr.matrix.DenseVector;
 

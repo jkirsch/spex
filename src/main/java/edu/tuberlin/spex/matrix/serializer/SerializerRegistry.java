@@ -1,8 +1,7 @@
-package edu.tuberlin.spex.utils;
+package edu.tuberlin.spex.matrix.serializer;
 
-import edu.tuberlin.spex.matrix.io.*;
-import edu.tuberlin.spex.matrix.io.adapted.AdaptedCompColMatrix;
-import edu.tuberlin.spex.matrix.io.adapted.AdaptedCompRowMatrix;
+import edu.tuberlin.spex.matrix.adapted.AdaptedCompColMatrix;
+import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
 import no.uib.cipr.matrix.DenseMatrix;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.sparse.LinkedSparseMatrix;

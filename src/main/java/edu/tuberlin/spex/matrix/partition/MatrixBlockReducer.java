@@ -1,10 +1,9 @@
-package edu.tuberlin.spex.matrix;
+package edu.tuberlin.spex.matrix.partition;
 
 import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
-import edu.tuberlin.spex.matrix.io.adapted.AdaptedCompRowMatrix;
-import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
+import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.sparse.LinkedSparseMatrix;
 import org.apache.flink.api.common.functions.RichGroupReduceFunction;

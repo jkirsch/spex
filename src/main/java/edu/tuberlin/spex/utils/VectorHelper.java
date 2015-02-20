@@ -1,6 +1,6 @@
 package edu.tuberlin.spex.utils;
 
-import edu.tuberlin.spex.matrix.io.adapted.DenseVectorHolder;
+import edu.tuberlin.spex.matrix.adapted.DenseVectorHolder;
 import no.uib.cipr.matrix.DenseVector;
 
 import java.util.Arrays;

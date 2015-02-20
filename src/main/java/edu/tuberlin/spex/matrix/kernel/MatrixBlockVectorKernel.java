@@ -1,4 +1,4 @@
-package edu.tuberlin.spex.utils;
+package edu.tuberlin.spex.matrix.kernel;
 
 import com.google.common.collect.Iterables;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
