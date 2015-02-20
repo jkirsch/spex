@@ -46,11 +46,11 @@ public class FlinkMatrixReader implements Serializable {
 
         FlinkMatrixReader flinkMatrixReader = new FlinkMatrixReader();
 
-        int n = 325729;
+        int n = 3997962;
         double alpha = 0.85;
-        String path = "webNotreDame.mtx";
+        String path = "liveJournal.mtx";
 
-        int[] blockSizes = new int[] {1,2,4,8,16,32,64,128};
+        int[] blockSizes = new int[] {512};
 
         if (args.length > 0) {
             path = args[0];
@@ -207,19 +207,23 @@ public class FlinkMatrixReader implements Serializable {
                 double scale = (1 - alpha) / (double) n;
                 return alpha * sum / (double) n + scale;
             }
-        });
+        }).name("Build Dangling Nodes");
 
         //MapOperator<Tuple2<DenseVector, Double>, DenseVector> reduce = matrixBlocks.crossWithTiny(iterate).map(new MatrixBlockVectorKernelCross(alpha)).name("MatrixBlockVectorKernel")
 
-        MapOperator<Tuple2<VectorBlock, Double>, VectorBlock> reduce = matrixBlocks.joinWithTiny(iterate).where("startCol").equalTo("startRow").map(new MapFunction<Tuple2<MatrixBlock, VectorBlock>, VectorBlock>() {
+        MapOperator<Tuple2<VectorBlock, Double>, VectorBlock> reduce = matrixBlocks.join(iterate).where("startCol").equalTo("startRow").map(new MapFunction<Tuple2<MatrixBlock, VectorBlock>, VectorBlock>() {
             @Override
             public VectorBlock map(Tuple2<MatrixBlock, VectorBlock> value) throws Exception {
-                return new VectorBlock(value.f0.getStartRow(), (DenseVector) value.f0.mult(value.f1.getVector()));
+                DenseVector mult = (DenseVector) value.f0.mult(value.f1.getVector());
+                if(mult == null) {
+                    LOG.error("Result is empty vector");
+                    LOG.error(value.toString());
+                }
+                return new VectorBlock(value.f0.getStartRow(), mult);
             }
         }).groupBy("startRow").reduce(new ReduceFunction<VectorBlock>() {
             @Override
             public VectorBlock reduce(VectorBlock value1, VectorBlock value2) throws Exception {
-                if (value2 == null) return value1;
                 return new VectorBlock(value1.getStartRow(), (DenseVector) value1.getVector().add(value2.getVector()));
             }
         }).crossWithTiny(personalization).map(new MapFunction<Tuple2<VectorBlock, Double>, VectorBlock>() {
