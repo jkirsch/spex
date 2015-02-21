@@ -5,7 +5,7 @@ import com.google.common.base.Stopwatch;
 import com.google.common.primitives.Ints;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
-import edu.tuberlin.spex.matrix.kernel.TimingMatrixBlockVectorKernel;
+import edu.tuberlin.spex.matrix.kernel.NonTimingMatrixBlockVectorKernel;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockReducer;
 import edu.tuberlin.spex.matrix.partition.SortByRowColumn;
@@ -15,11 +15,9 @@ import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Vector;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.flink.api.common.JobExecutionResult;
-import org.apache.flink.api.common.accumulators.LongCounter;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.common.functions.ReduceFunction;
-import org.apache.flink.api.common.functions.RichReduceFunction;
 import org.apache.flink.api.common.operators.Order;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -28,7 +26,6 @@ import org.apache.flink.api.java.io.LocalCollectionOutputFormat;
 import org.apache.flink.api.java.operators.*;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.runtime.util.EnvironmentInformation;
 import org.apache.flink.util.Collector;
@@ -119,7 +116,7 @@ public class FlinkMatrixReader implements Serializable {
     public TimingResult executePageRank(ExecutionEnvironment env, final double alpha, final int blocks, DataSet<Tuple3<Integer, Integer, Double>> input, final int n, final int iteration) throws Exception {
         final boolean transpose = true;
 
-        final int adjustedN = n % blocks > 0?n + (blocks - n % blocks):n;
+        final int adjustedN = n % blocks > 0 ? n + (blocks - n % blocks) : n;
 
         AggregateOperator<Tuple2<Integer, Double>> colSumsDataSet = input.<Tuple2<Integer, Double>>project(1, 2).name("Select column id").groupBy(0).aggregate(Aggregations.SUM, 1).name("Calculate ColSums");
 
@@ -147,8 +144,8 @@ public class FlinkMatrixReader implements Serializable {
 
         SortedGrouping<Tuple3<Integer, Integer, Double>> tuple3UnsortedGrouping = input.groupBy(new MatrixBlockPartitioner(adjustedN, blocks)).sortGroup(new SortByRowColumn(), Order.ASCENDING);
 
-                GroupReduceOperator < Tuple3 < Integer, Integer, Double >, MatrixBlock > matrixBlocks = tuple3UnsortedGrouping.
-                        reduceGroup(new MatrixBlockReducer(adjustedN, blocks, true, transpose)).withBroadcastSet(colSumsDataSet, "rowSums").name("Build Matrix Blocks");
+        GroupReduceOperator<Tuple3<Integer, Integer, Double>, MatrixBlock> matrixBlocks = tuple3UnsortedGrouping.
+                reduceGroup(new MatrixBlockReducer(adjustedN, blocks, true, transpose)).withBroadcastSet(colSumsDataSet, "rowSums").name("Build Matrix Blocks");
 
         // now multiply the matrixblocks with the vector
 
@@ -213,20 +210,17 @@ public class FlinkMatrixReader implements Serializable {
         //MapOperator<Tuple2<DenseVector, Double>, DenseVector> reduce = matrixBlocks.crossWithTiny(iterate).map(new MatrixBlockVectorKernelCross(alpha)).name("MatrixBlockVectorKernel")
 
         MapOperator<Tuple2<VectorBlock, Double>, VectorBlock> reduce = matrixBlocks.join(iterate).where("startCol").equalTo("startRow")
-                .map(new TimingMatrixBlockVectorKernel() {
-                }).groupBy("startRow").reduce(new RichReduceFunction<VectorBlock>() {
-
-                    public LongCounter counter;
-
-                    @Override
-                    public void open(Configuration parameters) throws Exception {
-                        super.open(parameters);
-                        counter = getRuntimeContext().getLongCounter("reduce");
-                    }
+                .map(new NonTimingMatrixBlockVectorKernel())
+                .groupBy("startRow").reduce(new ReduceFunction<VectorBlock>() {
 
                     @Override
                     public VectorBlock reduce(VectorBlock value1, VectorBlock value2) throws Exception {
-                        counter.add(1L);
+                        if (value1.getVector() == null) {
+                            return value2;
+                        }
+                        if (value2.getVector() == null) {
+                            return value1;
+                        }
                         return new VectorBlock(value1.getStartRow(), (DenseVector) value1.getVector().add(value2.getVector()));
                     }
                 }).cross(personalization).map(new MapFunction<Tuple2<VectorBlock, Double>, VectorBlock>() {
@@ -245,7 +239,7 @@ public class FlinkMatrixReader implements Serializable {
 
                         return value.f0;
                     }
-                }).name("Calculate next vector");;
+                }).name("Calculate next vector");
 
        /* MapOperator<Tuple2<DenseVector, Double>, DenseVector> reduce = matrixBlocks.map(new MatrixBlockVectorKernel(alpha)).name("MatrixBlockVectorKernel").withBroadcastSet(iterate, "vector")
                 .reduce(new ReduceFunction<DenseVector>() {
@@ -279,8 +273,8 @@ public class FlinkMatrixReader implements Serializable {
         Stopwatch stopwatch = new Stopwatch().start();
         JobExecutionResult execute = env.execute("Pagerank");
 
-        TreeMap<Integer, Integer> histogram = execute.getAccumulatorResult(TimingMatrixBlockVectorKernel.TIMINGS_ACCUMULATOR);
-        Long reduceCounts = execute.getAccumulatorResult("reduce");
+        //TreeMap<Integer, Integer> histogram = execute.getAccumulatorResult(TimingMatrixBlockVectorKernel.TIMINGS_ACCUMULATOR);
+        //Long reduceCounts = execute.getAccumulatorResult("reduce");
 
         stopwatch.stop();
 
@@ -293,7 +287,7 @@ public class FlinkMatrixReader implements Serializable {
         System.out.println(sum);
         //System.out.println(p_k1);
 
-        Preconditions.checkArgument((Math.abs(sum - 1) - 0.00001) <= 0.0,String.format("Overall sum not within bounds %1.5f n=%d b=%d",sum,n,blocks));
+        Preconditions.checkArgument((Math.abs(sum - 1) - 0.0001) <= 0.0, String.format("Overall sum not within bounds %1.5f n=%d b=%d", sum, n, blocks));
 
         return new TimingResult(resultCollector, stopwatch);
 

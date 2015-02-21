@@ -18,7 +18,6 @@ import java.util.concurrent.TimeUnit;
  * Date: 20.02.2015
  * Time: 22:16
  *
- * @author Johannes Kirschnick
  */
 public class TimingMatrixBlockVectorKernel extends RichMapFunction<Tuple2<MatrixBlock, VectorBlock>, VectorBlock> {
 
