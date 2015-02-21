@@ -68,8 +68,9 @@ public class FlinkMatrixReader implements Serializable {
                 blockSizes[i] = Ints.tryParse(index);
             }
             env.setDegreeOfParallelism(degree);
-            LOG.info("Analysing {} with {} nodes using parallelism {}", path, n, degree);
         }
+
+        LOG.info("Analysing {} with {} nodes using parallelism {} for the blocksizes {} ", path, n, env.getDegreeOfParallelism(), blockSizes);
 
         Map<Integer, Stopwatch> timings = new TreeMap<>();
         Map<Integer, List<Tuple2<Long, Integer>>> counts = new HashMap<>();
