@@ -3,11 +3,12 @@ package edu.tuberlin.spex.algorithms.accumulator;
 /**
  * Taken from Flink java examples
  */
+
 import org.apache.flink.api.common.accumulators.Accumulator;
+import org.apache.flink.core.memory.DataInputView;
+import org.apache.flink.core.memory.DataOutputView;
 
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -74,7 +75,7 @@ public class VectorAccumulator implements Accumulator<Integer, ArrayList<Integer
     }
 
     @Override
-    public void write(final ObjectOutputStream out) throws IOException {
+    public void write(final DataOutputView out) throws IOException {
         // binary serialization of the result vector:
         // [number of components, component 0, component 1, ...]
         out.writeInt(this.resultVector.size());
@@ -84,7 +85,7 @@ public class VectorAccumulator implements Accumulator<Integer, ArrayList<Integer
     }
 
     @Override
-    public void read(final ObjectInputStream in) throws IOException {
+    public void read(DataInputView in) throws IOException {
         // binary deserialization of the result vector
         final int size = in.readInt();
         for (int numReadComponents = 0; numReadComponents < size; numReadComponents++) {

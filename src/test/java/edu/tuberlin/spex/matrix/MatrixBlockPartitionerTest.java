@@ -2,13 +2,16 @@ package edu.tuberlin.spex.matrix;
 
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
+import edu.tuberlin.spex.algorithms.domain.VectorBlock;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
+import edu.tuberlin.spex.utils.VectorBlockHelper;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.junit.Test;
 
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
 public class MatrixBlockPartitionerTest {
@@ -145,16 +148,16 @@ public class MatrixBlockPartitionerTest {
 
     @Test
     public void testComputeRowSizesLarge() throws Exception {
-        int n = 3997962;
-        int blocks = 256;
+        int n = 325729;
+        int blocks = 128;
 
         final int adjustedN = n % blocks > 0?n + (blocks - n % blocks):n;
 
-        MatrixBlockPartitioner matrixBlockPartitioner = new MatrixBlockPartitioner(adjustedN, blocks);
-        List<MatrixBlockPartitioner.BlockDimensions> blockDimensionses = matrixBlockPartitioner.computeRowSizes();
+        List<VectorBlock> vectorBlocks = VectorBlockHelper.createBlocks(adjustedN, blocks, 1 / (double) n);
 
-        System.out.println();
-
+        for (VectorBlock vectorBlock : vectorBlocks) {
+            assertNotNull(vectorBlock);
+        }
 
     }
 }

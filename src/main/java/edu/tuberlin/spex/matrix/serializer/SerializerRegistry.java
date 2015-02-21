@@ -1,11 +1,5 @@
 package edu.tuberlin.spex.matrix.serializer;
 
-import edu.tuberlin.spex.matrix.adapted.AdaptedCompColMatrix;
-import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
-import no.uib.cipr.matrix.DenseMatrix;
-import no.uib.cipr.matrix.DenseVector;
-import no.uib.cipr.matrix.sparse.LinkedSparseMatrix;
-import no.uib.cipr.matrix.sparse.SparseVector;
 import org.apache.flink.api.java.ExecutionEnvironment;
 
 /**
@@ -17,12 +11,16 @@ public class SerializerRegistry {
     public static void register(ExecutionEnvironment env) {
 
         // Register Serializer
-        env.addDefaultKryoSerializer(DenseMatrix.class, DenseMatrixSerializer.class);
+
+        /*env.addDefaultKryoSerializer(DenseMatrix.class, DenseMatrixSerializer.class);
         env.addDefaultKryoSerializer(LinkedSparseMatrix.class, LinkedSparseMatrixSerializer.class);
         env.addDefaultKryoSerializer(AdaptedCompRowMatrix.class, AdaptedCompRowMatrixSerializer.class);
         env.addDefaultKryoSerializer(AdaptedCompColMatrix.class, AdaptedCompColMatrixSerializer.class);
-        env.addDefaultKryoSerializer(DenseVector.class, DenseVectorSerializer.class);
-        env.addDefaultKryoSerializer(SparseVector.class, SparseVectorSerializer.class);
+        //env.addDefaultKryoSerializer(DenseVector.class, DenseVectorSerializer.class);
+        //env.addDefaultKryoSerializer(SparseVector.class, SparseVectorSerializer.class);
+        //env.addDefaultKryoSerializer(BitSet.class, BitSetSerializer.class);
+        env.addDefaultKryoSerializer(MatrixBlock.class, MatrixBlockSerializer.class);
+       // env.addDefaultKryoSerializer(VectorBlock.class, VectorBlockSerializer.class);*/
 
     }
 }

@@ -135,4 +135,25 @@ public class MatrixBlock implements Serializable {
         this.matrix = matrix;
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        MatrixBlock that = (MatrixBlock) o;
+
+        if (startCol != that.startCol) return false;
+        if (startRow != that.startRow) return false;
+        if (!matrix.equals(that.matrix)) return false;
+
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int result = startRow;
+        result = 31 * result + startCol;
+        result = 31 * result + matrix.hashCode();
+        return result;
+    }
 }

@@ -7,7 +7,6 @@ import edu.tuberlin.spex.algorithms.domain.VectorBlock;
 import edu.tuberlin.spex.matrix.kernel.MatrixBlockVectorKernel;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockReducer;
-import edu.tuberlin.spex.matrix.partition.SortByRowColumn;
 import edu.tuberlin.spex.matrix.serializer.SerializerRegistry;
 import edu.tuberlin.spex.utils.VectorHelper;
 import no.uib.cipr.matrix.DenseMatrix;
@@ -28,12 +27,15 @@ import org.apache.flink.api.java.operators.*;
 import org.apache.flink.api.java.tuple.Tuple;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.api.java.tuple.Tuple4;
+import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import static org.hamcrest.Matchers.closeTo;
 
@@ -74,10 +76,27 @@ public class FlinkMatrixReaderTest {
             }
         });
 
-        SortedGrouping<Tuple3<Integer, Integer, Double>> tuple3UnsortedGrouping = input.groupBy(new MatrixBlockPartitioner(n, blocks)).sortGroup(new SortByRowColumn(), Order.ASCENDING);;
+        SortedGrouping<Tuple4<Integer, Integer, Double, Long>> tuple3UnsortedGrouping = input
+                .map(new RichMapFunction<Tuple3<Integer,Integer,Double>, Tuple4<Integer, Integer, Double, Long>>() {
 
-        GroupReduceOperator<Tuple3<Integer, Integer, Double>, MatrixBlock> matrixBlocks = tuple3UnsortedGrouping.
-                reduceGroup(new MatrixBlockReducer(n, blocks, true, tranpose)).withBroadcastSet(colSumsDataSet, "rowSums");
+                    MatrixBlockPartitioner matrixBlockPartitioner;
+
+                    @Override
+                    public void open(Configuration parameters) throws Exception {
+                        super.open(parameters);
+                        matrixBlockPartitioner = new MatrixBlockPartitioner(n, blocks);
+                    }
+
+                    @Override
+                    public Tuple4<Integer, Integer, Double, Long> map(Tuple3<Integer, Integer, Double> input) throws Exception {
+                        return new Tuple4<Integer, Integer, Double, Long>(input.f0, input.f1, input.f2, matrixBlockPartitioner.getKey(input));
+                    }
+                }).withConstantSet("0->0; 1->1; 2->2")
+                .groupBy(0).sortGroup(0, Order.ASCENDING).sortGroup(1, Order.ASCENDING);//.sortGroup(1, Order.ASCENDING);
+                //.sortGroup(new SortByRowColumn(), Order.ASCENDING);;
+
+        GroupReduceOperator<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> matrixBlocks = tuple3UnsortedGrouping.
+                reduceGroup(new MatrixBlockReducer(n, blocks, true, true)).withBroadcastSet(colSumsDataSet, "rowSums").name("Build Matrix Blocks");
 
         matrixBlocks.print();
 
@@ -178,6 +197,9 @@ public class FlinkMatrixReaderTest {
 
         int[][] pos = {{1, 3}, {2, 1}, {2, 6}, {3, 4}, {3, 5}, {4, 2}, {4, 7}, {7, 8}, {8, 7}};
 
+        // shuffle to ensure that sorting works
+        shuffleArray(pos);
+
         // Matrix is just for visual inspection
         DenseMatrix m = new DenseMatrix(n, n);
 
@@ -207,7 +229,6 @@ public class FlinkMatrixReaderTest {
         final double alpha = 0.80;
         final int n = 8;
 
-
         boolean tranpose = true;
 
         DataSource<Tuple3<Integer, Integer, Double>> input = env.fromCollection(createKnownMatrix(n, tranpose));
@@ -220,7 +241,7 @@ public class FlinkMatrixReaderTest {
             DenseVector p_k1 = new DenseVector(n);
 
             for (VectorBlock vectorBlock : timingResult.vectorBlocks) {
-                for (VectorEntry entry : vectorBlock.getVector()) {
+                for (VectorEntry entry : vectorBlock) {
                     if(p_k1.size() > entry.index() + vectorBlock.getStartRow()) {
                         p_k1.set(entry.index() + vectorBlock.getStartRow(), entry.get());
                     }
@@ -240,10 +261,20 @@ public class FlinkMatrixReaderTest {
 
         }
 
-
-
-
-
-
     }
+
+    // Implementing Fisher–Yates shuffle
+    static void shuffleArray(int[][] ar)
+    {
+        Random rnd = new Random();
+        for (int i = ar.length - 1; i > 0; i--)
+        {
+            int index = rnd.nextInt(i + 1);
+            // Simple swap
+            int[] a = ar[index];
+            ar[index] = ar[i];
+            ar[i] = a;
+        }
+    }
+
 }

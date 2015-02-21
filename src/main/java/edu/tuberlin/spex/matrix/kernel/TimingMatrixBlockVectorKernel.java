@@ -36,7 +36,7 @@ public class TimingMatrixBlockVectorKernel extends RichMapFunction<Tuple2<Matrix
     @Override
     public VectorBlock map(Tuple2<MatrixBlock, VectorBlock> matrixBlockVectorBlockTuple2) throws Exception {
         Stopwatch stopwatch = new Stopwatch().start();
-        DenseVector mult = (DenseVector) matrixBlockVectorBlockTuple2.f0.mult(matrixBlockVectorBlockTuple2.f1.getVector());
+        DenseVector mult = (DenseVector) matrixBlockVectorBlockTuple2.f0.mult(matrixBlockVectorBlockTuple2.f1);
         if (mult == null) {
             LOG.error("Result is empty vector");
             LOG.error(matrixBlockVectorBlockTuple2.toString());

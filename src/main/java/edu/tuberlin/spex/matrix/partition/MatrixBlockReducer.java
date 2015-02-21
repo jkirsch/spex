@@ -9,6 +9,7 @@ import no.uib.cipr.matrix.DenseVector;
 import org.apache.flink.api.common.functions.RichGroupReduceFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
 
@@ -19,7 +20,7 @@ import java.util.List;
  * Date: 12.02.2015
  * Time: 00:21
  */
-public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple3<Integer, Integer, Double>, MatrixBlock> {
+public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> {
 
     int n;
     int blocks;
@@ -53,13 +54,13 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple3<Integer, 
     }
 
     @Override
-    public void reduce(Iterable<Tuple3<Integer, Integer, Double>> values, Collector<MatrixBlock> out) throws Exception {
+    public void reduce(Iterable<Tuple4<Integer, Integer, Double, Long>> values, Collector<MatrixBlock> out) throws Exception {
 
-        PeekingIterator<Tuple3<Integer, Integer, Double>> peekingIterator = Iterators.peekingIterator(values.iterator());
+        PeekingIterator<Tuple4<Integer, Integer, Double, Long>> peekingIterator = Iterators.peekingIterator(values.iterator());
 
         // we assume that all elements in the group belong to the same partition in the matrix
         // so we can just pick the first one and estimate the block dimensions
-        Tuple3<Integer, Integer, Double> peek = peekingIterator.peek();
+        Tuple4<Integer, Integer, Double, Long> peek = peekingIterator.peek();
 
         // here we have the first instance
         // get the location of the block
@@ -77,9 +78,9 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple3<Integer, 
 
         // build the array information
 
-        Iterator<Tuple3<Integer, Integer, Double>> transform = Iterators.transform(peekingIterator, new Function<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>>() {
+        Iterator<Tuple3<Integer, Integer, Double>> transform = Iterators.transform(peekingIterator, new Function<Tuple4<Integer, Integer, Double, Long>, Tuple3<Integer, Integer, Double>>() {
             @Override
-            public Tuple3<Integer, Integer, Double> apply(Tuple3<Integer, Integer, Double> value) {
+            public Tuple3<Integer, Integer, Double> apply(Tuple4<Integer, Integer, Double, Long> value) {
 
                 // if we row normalize, divide this by the row sum
                 double matrixEntry = rowNormalize ?
@@ -90,7 +91,7 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple3<Integer, 
                 value.f1 -= blockDimensions.getColStart();
                 value.f2 = matrixEntry;
 
-                return value;
+                return new Tuple3<>(value.f0, value.f1, value.f2);
             }
         });
 
