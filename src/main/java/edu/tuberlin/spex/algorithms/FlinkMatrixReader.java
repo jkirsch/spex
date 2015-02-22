@@ -2,6 +2,7 @@ package edu.tuberlin.spex.algorithms;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.math.DoubleMath;
 import com.google.common.primitives.Ints;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
@@ -13,10 +14,7 @@ import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import no.uib.cipr.matrix.Vector;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.flink.api.common.JobExecutionResult;
-import org.apache.flink.api.common.functions.GroupReduceFunction;
-import org.apache.flink.api.common.functions.MapFunction;
-import org.apache.flink.api.common.functions.ReduceFunction;
-import org.apache.flink.api.common.functions.RichMapFunction;
+import org.apache.flink.api.common.functions.*;
 import org.apache.flink.api.common.operators.Order;
 import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
@@ -228,9 +226,9 @@ public class FlinkMatrixReader implements Serializable {
             }
         }).name("Build Dangling Nodes");
 
-        //MapOperator<Tuple2<DenseVector, Double>, DenseVector> reduce = matrixBlocks.crossWithTiny(iterate).map(new MatrixBlockVectorKernelCross(alpha)).name("MatrixBlockVectorKernel")
+        //MapOperator<Tuple2<DenseVector, Double>, DenseVector> nextVector = matrixBlocks.crossWithTiny(iterate).map(new MatrixBlockVectorKernelCross(alpha)).name("MatrixBlockVectorKernel")
 
-        final MapOperator<Tuple2<VectorBlock, Double>, VectorBlock> reduce = matrixBlocks.joinWithTiny(iterate).where("startCol").equalTo("startRow")
+        final MapOperator<Tuple2<VectorBlock, Double>, VectorBlock> nextVector = matrixBlocks.joinWithTiny(iterate).where("startCol").equalTo("startRow")
                 .map(new NonTimingMatrixBlockVectorKernel())
                 .groupBy("startRow").reduce(new ReduceFunction<VectorBlock>() {
 
@@ -272,11 +270,11 @@ public class FlinkMatrixReader implements Serializable {
                     }
                 }).name("Calculate next vector");
 
-       /* MapOperator<Tuple2<DenseVector, Double>, DenseVector> reduce = matrixBlocks.map(new MatrixBlockVectorKernel(alpha)).name("MatrixBlockVectorKernel").withBroadcastSet(iterate, "vector")
-                .reduce(new ReduceFunction<DenseVector>() {
-            //MapOperator<DenseVector, DenseVector> reduce = matrixBlockVectorKernel.reduce(new ReduceFunction<DenseVector>() {
+       /* MapOperator<Tuple2<DenseVector, Double>, DenseVector> nextVector = matrixBlocks.map(new MatrixBlockVectorKernel(alpha)).name("MatrixBlockVectorKernel").withBroadcastSet(iterate, "vector")
+                .nextVector(new ReduceFunction<DenseVector>() {
+            //MapOperator<DenseVector, DenseVector> nextVector = matrixBlockVectorKernel.nextVector(new ReduceFunction<DenseVector>() {
             @Override
-            public DenseVector reduce(DenseVector vector, DenseVector t1) throws Exception {
+            public DenseVector nextVector(DenseVector vector, DenseVector t1) throws Exception {
                 return (DenseVector) vector.add(t1);
             }
         }).returns("no.uib.cipr.matrix.DenseVector").crossWithTiny(personalization).map(new MapFunction<Tuple2<DenseVector, Double>, DenseVector>() {
@@ -292,7 +290,31 @@ public class FlinkMatrixReader implements Serializable {
             }
         }).name("Calculate next vector");              */
 
-        DataSet<VectorBlock> result = iterate.closeWith(reduce);
+
+        // filter out convergent vector blocks
+        JoinOperator.EquiJoin<VectorBlock, VectorBlock, Double> deltas = iterate.join(nextVector).where("startRow").equalTo("startRow").with(new FlatJoinFunction<VectorBlock, VectorBlock, Double>() {
+            @Override
+            public void join(VectorBlock first, VectorBlock second, Collector<Double> out) throws Exception {
+                double delta = first.add(second.scale(-1f)).norm(Vector.Norm.One);
+                //if (!DoubleMath.fuzzyEquals(delta, 0, 0.00001)) {
+                    out.collect(delta);
+                //}
+            }
+        });
+
+        FilterOperator<Double> stopping = deltas.reduce(new ReduceFunction<Double>() {
+            @Override
+            public Double reduce(Double value1, Double value2) throws Exception {
+                return value1 + value2;
+            }
+        }).filter(new FilterFunction<Double>() {
+            @Override
+            public boolean filter(Double delta) throws Exception {
+                return !DoubleMath.fuzzyEquals(delta, 0, 0.00001);
+            }
+        });
+
+        DataSet<VectorBlock> result = iterate.closeWith(nextVector, stopping);
 
         List<VectorBlock> resultCollector = new ArrayList<>();
         result.output(new LocalCollectionOutputFormat<>(resultCollector));
@@ -306,7 +328,7 @@ public class FlinkMatrixReader implements Serializable {
 
 
         //TreeMap<Integer, Integer> histogram = execute.getAccumulatorResult(TimingMatrixBlockVectorKernel.TIMINGS_ACCUMULATOR);
-        //Long reduceCounts = execute.getAccumulatorResult("reduce");
+        //Long reduceCounts = execute.getAccumulatorResult("nextVector");
 
         stopwatch.stop();
 
