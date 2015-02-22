@@ -50,7 +50,7 @@ public class PagerankTest {
     @Parameterized.Parameters(name = "{index}: Dataset {0}")
     public static Collection<Datasets.GRAPHS> data() {
         return Arrays.asList(
-                Datasets.GRAPHS.dblp,
+              //  Datasets.GRAPHS.dblp,
                 Datasets.GRAPHS.webBerkStan,
                 Datasets.GRAPHS.webStanford,
                 Datasets.GRAPHS.webNotreDame
@@ -151,7 +151,11 @@ public class PagerankTest {
         //createImage(orderByColumnSumMatrix, dataset, max_scaled_size, "sortedByColumn");
 
         File file = new File("datasets", dataset.name() + ".mtx");
-        MatrixMarketWriter.write(readAdjacency, file);
+        if(!file.exists()) {
+            MatrixMarketWriter.write(readAdjacency, file);
+        } else {
+            LOG.info("Left existing mtx file {} in place", file.getPath());
+        }
 
        // calcPageRank(graphInfo, readAdjacency);
        // calcPageRank(graphInfo, new FlexCompRowMatrix(orderByColumnSumMatrix));
