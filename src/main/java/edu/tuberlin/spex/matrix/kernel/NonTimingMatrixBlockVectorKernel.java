@@ -21,10 +21,6 @@ public class NonTimingMatrixBlockVectorKernel implements MapFunction<Tuple2<Matr
         VectorBlock vectorBlock = matrixBlockVectorBlockTuple2.f1;
         MatrixBlock matrixBlock = matrixBlockVectorBlockTuple2.f0;
         VectorBlock mult = (VectorBlock) matrixBlock.mult(vectorBlock);
-        if (mult == null) {
-            LOG.error("Result is empty vector");
-            LOG.error(matrixBlockVectorBlockTuple2.toString());
-        }
         return new VectorBlock(matrixBlock.getStartRow(), mult);
     }
 }

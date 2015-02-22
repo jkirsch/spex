@@ -8,7 +8,7 @@ import edu.tuberlin.spex.algorithms.domain.VectorBlock;
 import edu.tuberlin.spex.matrix.kernel.NonTimingMatrixBlockVectorKernel;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockReducer;
-import edu.tuberlin.spex.utils.VectorBlockHelper;
+import edu.tuberlin.spex.utils.ParallelVectorIterator;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import no.uib.cipr.matrix.Vector;
 import org.apache.commons.lang3.ArrayUtils;
@@ -173,7 +173,9 @@ public class FlinkMatrixReader implements Serializable {
         //        VectorHelper.identical(n, 1 / (double) n));
 
 
-        final DataSource<VectorBlock> denseVectorDataSource = env.fromCollection(VectorBlockHelper.createBlocks(adjustedN, blocks, 1 / (double) n));
+        //final DataSource<VectorBlock> denseVectorDataSource = env.fromCollection(VectorBlockHelper.createBlocks(adjustedN, blocks, 1 / (double) n));
+
+        final DataSource<VectorBlock> denseVectorDataSource = env.fromParallelCollection(new ParallelVectorIterator(adjustedN, blocks, 1 / (double) n), VectorBlock.class);
 
         final IterativeDataSet<VectorBlock> iterate = denseVectorDataSource.iterate(iteration);
 
@@ -311,7 +313,7 @@ public class FlinkMatrixReader implements Serializable {
         System.out.println(stopwatch);
         double sum = 0;
         for (VectorBlock vectorBlock : resultCollector) {
-            //TODO the last vector block contains entries we don't care about ..
+            //The last vector block contains entries we don't care about ..
             //FIX by subtracting from the overall sum Math.abs(e.get()); for all wrong entries - if any
             sum += vectorBlock.norm(Vector.Norm.One);
             if (vectorBlock.getStartRow() == adjustedN - adjustedN / blocks) {
@@ -330,7 +332,7 @@ public class FlinkMatrixReader implements Serializable {
         System.out.println(sum);
         //System.out.println(p_k1);
 
-        Preconditions.checkArgument((Math.abs(sum - 1) - 0.0001) <= 0.0, String.format("Overall sum not within bounds %1.5f n=%d b=%d", sum, n, blocks));
+        Preconditions.checkArgument((Math.abs(sum - 1) - 0.001) <= 0.0, String.format("Overall sum not within bounds %1.5f n=%d b=%d", sum, n, blocks));
 
         return new TimingResult(resultCollector, stopwatch);
 

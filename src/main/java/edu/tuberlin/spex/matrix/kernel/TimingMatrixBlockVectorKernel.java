@@ -4,7 +4,6 @@ import com.google.common.base.Stopwatch;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
 import edu.tuberlin.spex.utils.Utils;
-import no.uib.cipr.matrix.DenseVector;
 import org.apache.flink.api.common.accumulators.Histogram;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -36,11 +35,9 @@ public class TimingMatrixBlockVectorKernel extends RichMapFunction<Tuple2<Matrix
     @Override
     public VectorBlock map(Tuple2<MatrixBlock, VectorBlock> matrixBlockVectorBlockTuple2) throws Exception {
         Stopwatch stopwatch = new Stopwatch().start();
-        DenseVector mult = (DenseVector) matrixBlockVectorBlockTuple2.f0.mult(matrixBlockVectorBlockTuple2.f1);
-        if (mult == null) {
-            LOG.error("Result is empty vector");
-            LOG.error(matrixBlockVectorBlockTuple2.toString());
-        }
+        VectorBlock vectorBlock = matrixBlockVectorBlockTuple2.f1;
+        MatrixBlock matrixBlock = matrixBlockVectorBlockTuple2.f0;
+        VectorBlock mult = (VectorBlock) matrixBlock.mult(vectorBlock);
         histogram.add(Utils.safeLongToInt(stopwatch.stop().elapsed(TimeUnit.MICROSECONDS)));
         return new VectorBlock(matrixBlockVectorBlockTuple2.f0.getStartRow(), mult);
     }
