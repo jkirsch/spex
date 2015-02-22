@@ -154,14 +154,18 @@ public class IterationParser {
             }
 
             maxIt--;
+            if(parsed.size() < global) global--;
             for (int i = 0; i < maxIt; i++) {
-                System.err.print(i + 1 + " \t ");
+                System.err.printf("%3d\t",i + 1);
                 for (int pos = 0; pos < global; pos++) {
                     if (parsed.size() > pos && parsed.get(pos).size() > i) {
-                        System.err.print(parsed.get(pos).get(i) + ",");
-                    } else {
-                        System.err.print(" ,");
+                        System.err.printf("%6d",parsed.get(pos).get(i));
                     }
+                    // last ?
+                    if(pos < global-1) {
+                        System.err.print(",");
+                    }
+
                 }
                 System.err.println();
             }

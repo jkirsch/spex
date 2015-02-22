@@ -19,7 +19,7 @@ import org.slf4j.LoggerFactory;
  */
 public class PageRank {
 
-    static Logger LOG = LoggerFactory.getLogger(PageRank.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PageRank.class);
 
     // damping
     final double c;

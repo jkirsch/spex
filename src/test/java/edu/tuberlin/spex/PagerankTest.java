@@ -43,7 +43,7 @@ import java.util.regex.Pattern;
 @RunWith(Parameterized.class)
 public class PagerankTest {
 
-    Logger LOG = LoggerFactory.getLogger(PagerankTest.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PagerankTest.class);
 
     Datasets datasets = new Datasets();
 

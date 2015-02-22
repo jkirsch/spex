@@ -21,7 +21,7 @@ import java.nio.file.Paths;
  */
 public class Datasets {
 
-    Logger LOG = LoggerFactory.getLogger(Datasets.class);
+    private static final Logger LOG = LoggerFactory.getLogger(Datasets.class);
 
     private String targetDirectory = "datasets";
 

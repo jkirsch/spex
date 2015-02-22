@@ -52,6 +52,10 @@ public class AdaptedCompRowMatrix extends AbstractMatrix {
      */
     int[] rowPointer;
 
+    public AdaptedCompRowMatrix() {
+        super(0,0);
+    }
+
     /**
      * Constructor for CompRowMatrix
      * 

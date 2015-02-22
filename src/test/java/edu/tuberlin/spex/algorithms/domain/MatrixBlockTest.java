@@ -1,6 +1,7 @@
 package edu.tuberlin.spex.algorithms.domain;
 
 import edu.tuberlin.spex.MatrixTest;
+import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
 import edu.tuberlin.spex.utils.VectorHelper;
 import no.uib.cipr.matrix.DenseMatrix;
 import no.uib.cipr.matrix.DenseVector;
@@ -15,7 +16,7 @@ public class MatrixBlockTest {
 
         DenseMatrix matrix = MatrixTest.createKnownMatrix();
 
-        MatrixBlock matrixBlock = new MatrixBlock(0, 0, matrix);
+        MatrixBlock matrixBlock = new MatrixBlock(0, 0, new AdaptedCompRowMatrix(matrix));
 
         DenseVector ones = VectorHelper.ones(matrix.numColumns());
 

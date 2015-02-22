@@ -14,7 +14,7 @@ import org.slf4j.LoggerFactory;
  */
 public class NonTimingMatrixBlockVectorKernel implements MapFunction<Tuple2<MatrixBlock, VectorBlock>, VectorBlock> {
 
-    static Logger LOG = LoggerFactory.getLogger(NonTimingMatrixBlockVectorKernel.class);
+    private static Logger LOG = LoggerFactory.getLogger(NonTimingMatrixBlockVectorKernel.class);
 
     @Override
     public VectorBlock map(Tuple2<MatrixBlock, VectorBlock> matrixBlockVectorBlockTuple2) throws Exception {

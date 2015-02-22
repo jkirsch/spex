@@ -5,7 +5,7 @@ import com.esotericsoftware.kryo.Serializer;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
-import no.uib.cipr.matrix.Matrix;
+import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
 
 import java.io.Serializable;
 
@@ -28,7 +28,7 @@ public class MatrixBlockSerializer extends Serializer<MatrixBlock> implements Se
     public MatrixBlock read(Kryo kryo, Input input, Class<MatrixBlock> aClass) {
         int rows = input.readInt();
         int columns = input.readInt();
-        Matrix matrix = (Matrix) kryo.readClassAndObject(input);
+        AdaptedCompRowMatrix matrix = (AdaptedCompRowMatrix) kryo.readClassAndObject(input);
         return new MatrixBlock(rows, columns, matrix);
     }
 }

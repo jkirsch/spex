@@ -21,7 +21,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class TimingMatrixBlockVectorKernel extends RichMapFunction<Tuple2<MatrixBlock, VectorBlock>, VectorBlock> {
 
-    static Logger LOG = LoggerFactory.getLogger(TimingMatrixBlockVectorKernel.class);
+    private static final Logger LOG = LoggerFactory.getLogger(TimingMatrixBlockVectorKernel.class);
     public static String TIMINGS_ACCUMULATOR = "timings";
 
     private Histogram histogram;

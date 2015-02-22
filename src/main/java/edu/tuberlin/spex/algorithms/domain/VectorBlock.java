@@ -1,13 +1,10 @@
 package edu.tuberlin.spex.algorithms.domain;
 
-import com.esotericsoftware.kryo.Kryo;
-import com.esotericsoftware.kryo.KryoSerializable;
-import com.esotericsoftware.kryo.io.Input;
-import com.esotericsoftware.kryo.io.Output;
 import no.uib.cipr.matrix.AbstractVector;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Vector;
 
+import java.io.Serializable;
 import java.util.Arrays;
 
 /**
@@ -17,7 +14,7 @@ import java.util.Arrays;
  * Time: 22:46
  *
  */
-public class VectorBlock extends AbstractVector implements KryoSerializable {
+public class VectorBlock extends AbstractVector implements Serializable {
 
     /** Identifier to join with the corresponding matrix block. */
     public int startRow;
@@ -67,7 +64,12 @@ public class VectorBlock extends AbstractVector implements KryoSerializable {
 
     @Override
     public VectorBlock copy() {
-        return new VectorBlock(startRow, new DenseVector(data));
+
+        VectorBlock block = new VectorBlock(this.size());
+        block.setStartRow(startRow);
+        block.setData(getData().clone());
+
+        return block;
     }
 
     @Override
@@ -180,7 +182,7 @@ public class VectorBlock extends AbstractVector implements KryoSerializable {
         this.size = size;
     }
 
-    @Override
+/*    @Override
     public void write(Kryo kryo, Output output) {
         output.writeInt(startRow);
         output.writeInt(data.length);
@@ -192,5 +194,5 @@ public class VectorBlock extends AbstractVector implements KryoSerializable {
         startRow = input.readInt();
         int size = input.readInt();
         data = input.readDoubles(size);
-    }
+    } */
 }
