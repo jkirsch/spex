@@ -52,11 +52,11 @@ public class FlinkMatrixReader implements Serializable {
 
         FlinkMatrixReader flinkMatrixReader = new FlinkMatrixReader();
 
-        int n = 685230;
+        int n = 325729;
         double alpha = 0.85;
-        String path = "webBerkStan.mtx";
+        String path = "webNotreDame.mtx";
 
-        int[] blockSizes = new int[]{16};
+        int[] blockSizes = new int[]{1,2,4,8,16,32,64,128};
 
         if (args.length > 0) {
             path = args[0];
@@ -159,7 +159,7 @@ public class FlinkMatrixReader implements Serializable {
                     public Tuple4<Integer, Integer, Double, Long> map(Tuple3<Integer, Integer, Double> input) throws Exception {
                         return new Tuple4<Integer, Integer, Double, Long>(input.f0, input.f1, input.f2, matrixBlockPartitioner.getKey(input));
                     }
-                }).withConstantSet("0->0; 1->1; 2->2")
+                }).withForwardedFields("0->0; 1->1; 2->2")
                 .groupBy(3).sortGroup(0, Order.ASCENDING).sortGroup(1, Order.ASCENDING);//.sortGroup(1, Order.ASCENDING);
 
         //sortGroup(new SortByRowColumn(), Order.ASCENDING);

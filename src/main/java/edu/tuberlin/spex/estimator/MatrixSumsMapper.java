@@ -1,6 +1,6 @@
 package edu.tuberlin.spex.estimator;
 
-import edu.tuberlin.spex.algorithms.accumulator.VectorAccumulator;
+import org.apache.flink.api.common.accumulators.Histogram;
 import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
@@ -14,19 +14,16 @@ public class MatrixSumsMapper extends RichMapFunction<Tuple3<Integer, Integer, D
     public static final String ROW_SUMS = "rowSum";
     public static final String COL_SUMS = "colSum";
 
-    private final VectorAccumulator rowSums = new VectorAccumulator();
-    private final VectorAccumulator colSums = new VectorAccumulator();
+    private Histogram rowSums;
+    private Histogram colSums;
 
     @Override
     public void open(Configuration parameters) throws Exception {
         super.open(parameters);
 
         // register the accumulator instances
-        getRuntimeContext().addAccumulator(ROW_SUMS,
-                this.rowSums);
-
-        getRuntimeContext().addAccumulator(COL_SUMS,
-                this.colSums);
+        rowSums = getRuntimeContext().getHistogram(ROW_SUMS);
+        colSums = getRuntimeContext().getHistogram(COL_SUMS);
     }
 
     @Override
