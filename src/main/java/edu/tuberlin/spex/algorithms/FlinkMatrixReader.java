@@ -56,12 +56,12 @@ public class FlinkMatrixReader implements Serializable {
         double alpha = 0.85;
         String path = "datasets/webNotreDame.mtx";
 
-        int[] blockSizes = new int[]{1,2,4,8,16,32,64,128};
+        int[] blockSizes = new int[]{4};
 
         if (args.length > 0) {
             path = args[0];
-            Integer degree = Ints.tryParse(args[2]);
-            String[] indices = ArrayUtils.subarray(args, 3, args.length);
+            Integer degree = Ints.tryParse(args[1]);
+            String[] indices = ArrayUtils.subarray(args, 2, args.length);
             blockSizes = new int[indices.length];
             for (int i = 0; i < indices.length; i++) {
                 String index = indices[i];
