@@ -2,12 +2,17 @@ package edu.tuberlin.spex.algorithms;
 
 import com.google.common.collect.Lists;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
+import edu.tuberlin.spex.utils.VectorBlockHelper;
 import no.uib.cipr.matrix.DenseMatrix;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Vector;
 import no.uib.cipr.matrix.VectorEntry;
+import org.apache.flink.api.java.DataSet;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.operators.DataSource;
+import org.apache.flink.api.java.operators.DeltaIteration;
+import org.apache.flink.api.java.operators.GroupReduceOperator;
+import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.junit.Assert;
 import org.junit.Test;
@@ -23,6 +28,35 @@ public class FlinkMatrixReaderTest {
     public void testKnown() throws Exception {
 
         createKnownMatrix(8, true);
+
+    }
+
+    @Test
+    public void testCreate() throws Exception {
+        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+        env.setDegreeOfParallelism(1);
+
+        final double alpha = 0.80;
+        final int n = 8;
+        final int blocks = 2;
+
+        boolean tranpose = true;
+
+        DataSource<Tuple3<Integer, Integer, Double>> input = env.fromCollection(createKnownMatrix(n, tranpose));
+
+        DataSource<Tuple2<Integer, VectorBlock>> denseVectorDataSource = env.fromCollection(VectorBlockHelper.createTupleBlocks(n, blocks, 1 / (double) n));
+
+        //final IterativeDataSet<VectorBlock> iterate = denseVectorDataSource.iterate(iteration);
+        final DeltaIteration<Tuple2<Integer, VectorBlock>, Tuple2<Integer, VectorBlock>> iterate = denseVectorDataSource.iterateDelta(denseVectorDataSource, 10, 0);
+
+        GroupReduceOperator<Tuple2<Integer, VectorBlock>, Tuple2<Integer, VectorBlock>> delta = iterate.getWorkset().first(1);
+
+        DataSet<Tuple2<Integer, VectorBlock>> tuple2DataSet = iterate.closeWith(delta, delta);
+
+        tuple2DataSet.print();
+
+        env.execute();
+
 
     }
 

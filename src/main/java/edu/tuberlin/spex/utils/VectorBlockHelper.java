@@ -5,6 +5,7 @@ import com.google.common.collect.Lists;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import no.uib.cipr.matrix.DenseVector;
+import org.apache.flink.api.java.tuple.Tuple2;
 
 import java.util.List;
 
@@ -32,6 +33,26 @@ public class VectorBlockHelper {
             }
         });
 
+    }
+
+    public static List<Tuple2<Integer, VectorBlock>> createTupleBlocks(final int n, int blockSize, final double init) {
+        MatrixBlockPartitioner matrixBlockPartitioner = new MatrixBlockPartitioner(n, blockSize);
+
+        // get the row partition sizes
+        List<MatrixBlockPartitioner.BlockDimensions> blockDimensions = matrixBlockPartitioner.computeRowSizes();
+
+
+        return Lists.transform(blockDimensions, new Function<MatrixBlockPartitioner.BlockDimensions, Tuple2<Integer, VectorBlock>>() {
+            @Override
+            public Tuple2<Integer, VectorBlock> apply(MatrixBlockPartitioner.BlockDimensions blockDimension) {
+                DenseVector identical = VectorHelper.identical(blockDimension.getRows(), init);
+                // if overflow set the last elements to 0
+                VectorBlock block = new VectorBlock(
+                        blockDimension.getRowStart(),
+                        identical);
+                return new Tuple2<>(blockDimension.getRowStart(), block);
+            }
+        });
 
     }
 }

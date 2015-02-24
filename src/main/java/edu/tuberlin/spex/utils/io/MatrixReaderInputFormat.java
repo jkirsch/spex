@@ -1,24 +1,26 @@
 package edu.tuberlin.spex.utils.io;
 
+import com.google.common.base.Charsets;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
-import com.google.common.collect.Lists;
-import com.google.common.primitives.Doubles;
+import com.google.common.io.CharStreams;
+import com.google.common.io.LineProcessor;
+import edu.tuberlin.spex.utils.CompressionHelper;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.io.DelimitedInputFormat;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.regex.Pattern;
 
 /**
  * Date: 29.01.2015
  * Time: 22:48
- *
  */
 public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer, Integer, Double>> {
 
@@ -57,6 +59,7 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
 
     /**
      * Default to 1 based file
+     *
      * @param filePath
      */
     public MatrixReaderInputFormat(Path filePath) {
@@ -92,26 +95,27 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
 
         //Check if \n is used as delimiter and the end of this line is a \r, then remove \r from the line
         if (this.getDelimiter() != null && this.getDelimiter().length == 1
-                && this.getDelimiter()[0] == NEW_LINE && offset+numBytes >= 1
-                && bytes[offset+numBytes-1] == CARRIAGE_RETURN){
+                && this.getDelimiter()[0] == NEW_LINE && offset + numBytes >= 1
+                && bytes[offset + numBytes - 1] == CARRIAGE_RETURN) {
             numBytes -= 1;
         }
 
         String value = new String(bytes, offset, numBytes, this.charsetName);
 
         if (!StringUtils.isEmpty(value) && !StringUtils.startsWithAny(value, "//", "%")) {
-            ArrayList<String> splitted = Lists.newArrayList(Splitter.on(WHITESPACE_PATTERN).trimResults().split(value.trim()));
+            Iterable<String> split = Splitter.on(WHITESPACE_PATTERN).trimResults().split(value.trim());
+            Iterator<String> iterator = split.iterator();
             try {
-                int row = Integer.parseInt(splitted.get(0)) + indexOffset;
-                int column = Integer.parseInt(splitted.get(1)) + indexOffset;
+                int row = Integer.parseInt(iterator.next()) + indexOffset;
+                int column = Integer.parseInt(iterator.next()) + indexOffset;
                 double matrixEntry;
-                if(splitted.size() == 3) {
-                    matrixEntry = Doubles.tryParse(splitted.get(2));
-                } else {
-                    matrixEntry = 1;
-                }
+                //if(iterator.hasNext()) {
+                matrixEntry = Double.parseDouble(iterator.next());
+                //} else {
+                ///  matrixEntry = 1;
+                //}
 
-                if(row - indexOffset == size) {
+                if (row - indexOffset == size) {
                     // this element is the matrix size -- skip it
                     return null;
                 }
@@ -119,7 +123,7 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
                 Preconditions.checkElementIndex(row, size, "row");
                 Preconditions.checkElementIndex(column, size, "col");
 
-                if(!transpose) {
+                if (!transpose) {
                     reuse.setFields(row, column, matrixEntry);
                 } else {
                     reuse.setFields(column, row, matrixEntry);
@@ -127,11 +131,52 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
                 return reuse;
 
             } catch (java.util.NoSuchElementException e) {
-                throw new IllegalArgumentException("Error parsing line >" +value+"<",e);
+                throw new IllegalArgumentException("Error parsing line >" + value + "<", e);
             }
 
         }
 
         return null;
+    }
+
+    public static Integer getSize(String filename) throws IOException {
+        // get Dimensions
+
+        BufferedReader readable = null;
+        try {
+            FileInputStream fileInputStream = new FileInputStream(filename);
+            InputStream decompressionStream = CompressionHelper.getDecompressionStream(fileInputStream);
+            // Iterate over the lines
+            readable = new BufferedReader(new InputStreamReader(decompressionStream, Charsets.UTF_8));
+
+            return CharStreams.readLines(readable, new LineProcessor<Integer>() {
+
+                public int value;
+
+                @Override
+                public boolean processLine(String line) throws IOException {
+                    // Example
+                    /*
+                    %%MatrixMarket matrix coordinate real general
+                    %Matrix generated automatically on Sun Feb 22 17:02:04 CET 2015
+                    325729     325729             1497134
+                    */
+                    if (StringUtils.isEmpty(line) || StringUtils.startsWith(line, "%")) return true;
+                    // parse the size
+                    value = Integer.parseInt(Splitter.on(WHITESPACE_PATTERN).split(line.trim()).iterator().next());
+                    return false;
+                }
+
+                @Override
+                public Integer getResult() {
+                    return value;
+                }
+            });
+
+
+        } finally {
+            IOUtils.closeQuietly(readable);
+        }
+
     }
 }

@@ -9,6 +9,7 @@ import edu.tuberlin.spex.algorithms.domain.VectorBlock;
 import edu.tuberlin.spex.matrix.kernel.NonTimingMatrixBlockVectorKernel;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockReducer;
+import edu.tuberlin.spex.matrix.serializer.SerializerRegistry;
 import edu.tuberlin.spex.utils.ParallelVectorIterator;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import no.uib.cipr.matrix.Vector;
@@ -48,17 +49,17 @@ public class FlinkMatrixReader implements Serializable {
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
         EnvironmentInformation.logEnvironmentInfo(LOG, "FlinkMatrixReader");
 
+        SerializerRegistry.register(env);
+
         FlinkMatrixReader flinkMatrixReader = new FlinkMatrixReader();
 
-        int n = 325729;
         double alpha = 0.85;
-        String path = "webNotreDame.mtx";
+        String path = "datasets/webNotreDame.mtx";
 
         int[] blockSizes = new int[]{1,2,4,8,16,32,64,128};
 
         if (args.length > 0) {
             path = args[0];
-            n = Ints.tryParse(args[1]);
             Integer degree = Ints.tryParse(args[2]);
             String[] indices = ArrayUtils.subarray(args, 3, args.length);
             blockSizes = new int[indices.length];
@@ -69,13 +70,17 @@ public class FlinkMatrixReader implements Serializable {
             env.setDegreeOfParallelism(degree);
         }
 
+        // read the size information
+        int n = MatrixReaderInputFormat.getSize(path);
+
         LOG.info("Analysing {} with {} nodes using parallelism {} for the blocksizes {} ", path, n, env.getDegreeOfParallelism(), blockSizes);
 
         Map<Integer, Stopwatch> timings = new TreeMap<>();
         Map<Integer, List<Tuple2<Long, Integer>>> counts = new HashMap<>();
 
         for (Integer blocksize : blockSizes) {
-            DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path("datasets/" + path), -1, n, true)).name("Edge list");
+
+            DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path(path), -1, n, true)).name("Edge list");
             TimingResult timingResult = flinkMatrixReader.executePageRank(env, alpha, blocksize, input, n, 100);
             timings.put(blocksize, timingResult.stopwatch);
 
@@ -230,6 +235,7 @@ public class FlinkMatrixReader implements Serializable {
 
         final MapOperator<Tuple2<VectorBlock, Double>, VectorBlock> nextVector = matrixBlocks.joinWithTiny(iterate).where("startCol").equalTo("startRow")
                 .map(new NonTimingMatrixBlockVectorKernel())
+                .returns(VectorBlock.class)
                 .groupBy("startRow").reduce(new ReduceFunction<VectorBlock>() {
 
                     @Override
@@ -252,7 +258,7 @@ public class FlinkMatrixReader implements Serializable {
                         return (VectorBlock) value1.add(value2);
                         //return new VectorBlock(value1.getStartRow(), (VectorBlock) value1.add(value2));
                     }
-                }).cross(personalization).map(new MapFunction<Tuple2<VectorBlock, Double>, VectorBlock>() {
+                }).returns(VectorBlock.class).cross(personalization).map(new MapFunction<Tuple2<VectorBlock, Double>, VectorBlock>() {
                     @Override
                     public VectorBlock map(Tuple2<VectorBlock, Double> value) throws Exception {
                         double[] data = value.f0.getData();
@@ -268,37 +274,14 @@ public class FlinkMatrixReader implements Serializable {
 
                         return value.f0;//new VectorBlock(value.f0.startRow, value.f0);
                     }
-                }).name("Calculate next vector");
-
-       /* MapOperator<Tuple2<DenseVector, Double>, DenseVector> nextVector = matrixBlocks.map(new MatrixBlockVectorKernel(alpha)).name("MatrixBlockVectorKernel").withBroadcastSet(iterate, "vector")
-                .nextVector(new ReduceFunction<DenseVector>() {
-            //MapOperator<DenseVector, DenseVector> nextVector = matrixBlockVectorKernel.nextVector(new ReduceFunction<DenseVector>() {
-            @Override
-            public DenseVector nextVector(DenseVector vector, DenseVector t1) throws Exception {
-                return (DenseVector) vector.add(t1);
-            }
-        }).returns("no.uib.cipr.matrix.DenseVector").crossWithTiny(personalization).map(new MapFunction<Tuple2<DenseVector, Double>, DenseVector>() {
-            @Override
-            public DenseVector map(Tuple2<DenseVector, Double> value) throws Exception {
-                double[] data = value.f0.getData();
-
-                for (int i = 0; i < data.length; i++) {
-                    data[i] = data[i] + value.f1;
-                }
-
-                return value.f0;
-            }
-        }).name("Calculate next vector");              */
-
+                }).returns(VectorBlock.class).name("Calculate next vector");
 
         // filter out convergent vector blocks
         JoinOperator.EquiJoin<VectorBlock, VectorBlock, Double> deltas = iterate.join(nextVector).where("startRow").equalTo("startRow").with(new FlatJoinFunction<VectorBlock, VectorBlock, Double>() {
             @Override
             public void join(VectorBlock first, VectorBlock second, Collector<Double> out) throws Exception {
                 double delta = first.add(second.scale(-1f)).norm(Vector.Norm.One);
-                //if (!DoubleMath.fuzzyEquals(delta, 0, 0.00001)) {
-                    out.collect(delta);
-                //}
+                out.collect(delta);
             }
         });
 
