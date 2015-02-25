@@ -109,11 +109,11 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
                 int row = Integer.parseInt(iterator.next()) + indexOffset;
                 int column = Integer.parseInt(iterator.next()) + indexOffset;
                 double matrixEntry;
-                //if(iterator.hasNext()) {
+                if(iterator.hasNext()) {
                 matrixEntry = Double.parseDouble(iterator.next());
-                //} else {
-                ///  matrixEntry = 1;
-                //}
+                } else {
+                  matrixEntry = 1;
+                }
 
                 if (row - indexOffset == size) {
                     // this element is the matrix size -- skip it
