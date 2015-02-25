@@ -103,7 +103,7 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
         String value = new String(bytes, offset, numBytes, this.charsetName);
 
         if (!StringUtils.isEmpty(value) && !StringUtils.startsWithAny(value, "//", "%")) {
-            Iterable<String> split = Splitter.on(WHITESPACE_PATTERN).trimResults().split(value.trim());
+            Iterable<String> split = Splitter.on(WHITESPACE_PATTERN).split(value.trim());
             Iterator<String> iterator = split.iterator();
             try {
                 int row = Integer.parseInt(iterator.next()) + indexOffset;

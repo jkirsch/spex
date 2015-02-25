@@ -11,6 +11,7 @@ import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockReducer;
 import edu.tuberlin.spex.matrix.serializer.SerializerRegistry;
 import edu.tuberlin.spex.utils.ParallelVectorIterator;
+import edu.tuberlin.spex.utils.TicToc;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import no.uib.cipr.matrix.Vector;
 import org.apache.commons.lang3.ArrayUtils;
@@ -126,7 +127,17 @@ public class FlinkMatrixReader implements Serializable {
         AggregateOperator<Tuple2<Integer, Double>> colSumsDataSet = input.<Tuple2<Integer, Double>>project(1, 2).name("Select column id").groupBy(0).aggregate(Aggregations.SUM, 1).name("Calculate ColSums");
 
         // transform the aggregated sums into a vector which is 1 for all non entries
-        GroupReduceOperator<Tuple2<Integer, Double>, BitSet> personalizationVector = colSumsDataSet.reduceGroup(new GroupReduceFunction<Tuple2<Integer, Double>, BitSet>() {
+        GroupReduceOperator<Tuple2<Integer, Double>, BitSet> personalizationVector = colSumsDataSet.reduceGroup(new RichGroupReduceFunction<Tuple2<Integer, Double>, BitSet>() {
+            @Override
+            public void open(Configuration parameters) throws Exception {
+                TicToc.tic("Build personalization Vector", "starting");
+            }
+
+            @Override
+            public void close() throws Exception {
+                TicToc.toc("Build personalization Vector", "finished");;
+            }
+
             @Override
             public void reduce(Iterable<Tuple2<Integer, Double>> values, Collector<BitSet> out) throws Exception {
                 //SparseVector personalizationVector = new SparseVector(VectorHelper.ones(n));

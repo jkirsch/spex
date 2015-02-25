@@ -182,6 +182,31 @@ public class VectorBlock extends AbstractVector implements Serializable {
         this.size = size;
     }
 
+/*
+    @Override
+    public void write(DataOutputView out) throws IOException {
+        out.writeInt(startRow);
+        out.write(size);
+
+        ByteBuffer allocate = ByteBuffer.allocate(size * 8);
+        allocate.asDoubleBuffer().put(data);
+        out.write(allocate.array());
+
+    }
+
+    @Override
+    public void read(DataInputView in) throws IOException {
+        startRow = in.readInt();
+        size = in.readInt();
+        data = new double[size];
+
+        ByteBuffer allocate = ByteBuffer.allocate(size * 8);
+        in.read(allocate.array());
+
+        DoubleBuffer.wrap(data).put(allocate.asDoubleBuffer());
+
+    }*/
+
 /*    @Override
     public void write(Kryo kryo, Output output) {
         output.writeInt(startRow);

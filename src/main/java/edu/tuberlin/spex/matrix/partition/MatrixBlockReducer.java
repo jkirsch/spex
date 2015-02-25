@@ -5,6 +5,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
+import edu.tuberlin.spex.utils.TicToc;
 import no.uib.cipr.matrix.DenseVector;
 import org.apache.flink.api.common.functions.RichGroupReduceFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -51,6 +52,12 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, 
             }
         }
 
+        TicToc.tic("MatrixBlockReducer", "starting");
+    }
+
+    @Override
+    public void close() throws Exception {
+        TicToc.toc("MatrixBlockReducer", "finished");
     }
 
     @Override
