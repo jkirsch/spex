@@ -1,7 +1,5 @@
 package edu.tuberlin.spex.matrix.serializer;
 
-import edu.tuberlin.spex.algorithms.domain.VectorBlock;
-import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
 import org.apache.flink.api.java.ExecutionEnvironment;
 
 /**
@@ -22,8 +20,8 @@ public class SerializerRegistry {
         //env.addDefaultKryoSerializer(SparseVector.class, SparseVectorSerializer.class);
         //env.addDefaultKryoSerializer(BitSet.class, BitSetSerializer.class);
         env.addDefaultKryoSerializer(MatrixBlock.class, MatrixBlockSerializer.class); */
-        env.addDefaultKryoSerializer(AdaptedCompRowMatrix.class, AdaptedCompRowMatrixSerializer.class);
-        env.addDefaultKryoSerializer(VectorBlock.class, VectorBlockSerializer.class);
+        //env.addDefaultKryoSerializer(AdaptedCompRowMatrix.class, AdaptedCompRowMatrixSerializer.class);
+        //env.addDefaultKryoSerializer(VectorBlock.class, VectorBlockSerializer.class);
 
     }
 }

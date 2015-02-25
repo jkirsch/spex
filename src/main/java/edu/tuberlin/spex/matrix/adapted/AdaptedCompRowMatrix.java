@@ -28,6 +28,9 @@ import no.uib.cipr.matrix.io.MatrixSize;
 import no.uib.cipr.matrix.io.MatrixVectorReader;
 import org.apache.commons.lang.ArrayUtils;
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.core.memory.DataInputView;
+import org.apache.flink.core.memory.DataOutputView;
+import org.apache.flink.types.Value;
 
 import java.io.IOException;
 import java.util.*;
@@ -35,7 +38,7 @@ import java.util.*;
 /**
  * Compressed row storage (CRS) matrix
  */
-public class AdaptedCompRowMatrix extends AbstractMatrix {
+public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
     /**
      * Matrix data
@@ -642,4 +645,60 @@ public class AdaptedCompRowMatrix extends AbstractMatrix {
 
     }
 
+    @Override
+    public void write(DataOutputView out) throws IOException {
+
+        out.writeInt(numRows);
+        out.writeInt(numColumns);
+
+        out.writeInt(columnIndex.length);
+
+        for (int i : columnIndex) {
+            out.writeInt(i);
+        }
+
+        out.writeInt(rowPointer.length);
+
+        for (int i : rowPointer) {
+            out.writeInt(i);
+        }
+
+        out.writeInt(data.length);
+
+        for (double v : data) {
+            out.writeDouble(v);
+        }
+
+
+    }
+
+    @Override
+    public void read(DataInputView in) throws IOException {
+
+        numRows = in.readInt();
+        numColumns = in.readInt();
+
+        int colSize = in.readInt();
+
+        columnIndex = new int[colSize];
+        for (int i = 0; i < colSize; i++) {
+            columnIndex[i] = in.readInt();
+        }
+
+        int rowSize = in.readInt();
+        rowPointer = new int[rowSize];
+
+        for (int i = 0; i < rowSize; i++) {
+            rowPointer[i] = in.readInt();
+        }
+
+        int dataSize = in.readInt();
+        data = new double[dataSize];
+
+        for (int i = 0; i < dataSize; i++) {
+            data[i] = in.readDouble();
+
+        }
+
+    }
 }
