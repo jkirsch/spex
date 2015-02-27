@@ -33,6 +33,9 @@ import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.types.Value;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.DoubleBuffer;
+import java.nio.IntBuffer;
 import java.util.*;
 
 /**
@@ -651,19 +654,18 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         out.writeInt(numRows);
         out.writeInt(numColumns);
 
+        // write array sizes
         out.writeInt(columnIndex.length);
+        out.writeInt(rowPointer.length);
+        out.writeInt(data.length);
 
         for (int i : columnIndex) {
             out.writeInt(i);
         }
 
-        out.writeInt(rowPointer.length);
-
         for (int i : rowPointer) {
             out.writeInt(i);
         }
-
-        out.writeInt(data.length);
 
         for (double v : data) {
             out.writeDouble(v);
@@ -678,27 +680,51 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         numRows = in.readInt();
         numColumns = in.readInt();
 
+        // read array sizes
         int colSize = in.readInt();
+        int rowSize = in.readInt();
+        int dataSize = in.readInt();
+
 
         columnIndex = new int[colSize];
-        for (int i = 0; i < colSize; i++) {
-            columnIndex[i] = in.readInt();
-        }
-
-        int rowSize = in.readInt();
         rowPointer = new int[rowSize];
-
-        for (int i = 0; i < rowSize; i++) {
-            rowPointer[i] = in.readInt();
-        }
-
-        int dataSize = in.readInt();
         data = new double[dataSize];
 
-        for (int i = 0; i < dataSize; i++) {
+
+        ByteBuffer byteBuffer = ByteBuffer.allocate(colSize * 4 + rowSize * 4 + dataSize * 8);
+        in.readFully(byteBuffer.array());
+
+        IntBuffer colBuf = IntBuffer.wrap(columnIndex);
+        IntBuffer rowBuf = IntBuffer.wrap(rowPointer);
+
+        IntBuffer src = (IntBuffer) byteBuffer.asIntBuffer().limit(colSize);
+        colBuf.put(src);
+        // advance the buffer
+        byteBuffer.position(colSize * 4);
+
+        src = (IntBuffer) byteBuffer.asIntBuffer().limit(rowSize);
+        rowBuf.put(src);
+
+        byteBuffer.position(colSize * 4 + rowSize * 4);
+
+        // the remaining
+        DoubleBuffer.wrap(data).put(byteBuffer.asDoubleBuffer());
+
+
+        /*for (int i = 0; i < colSize; i++) {
+            columnIndex[i] = in.readInt();
+        }*/
+
+
+       /* for (int i = 0; i < rowSize; i++) {
+            rowPointer[i] = in.readInt();
+        }*/
+
+
+/*        for (int i = 0; i < dataSize; i++) {
             data[i] = in.readDouble();
 
-        }
+        }*/
 
     }
 }

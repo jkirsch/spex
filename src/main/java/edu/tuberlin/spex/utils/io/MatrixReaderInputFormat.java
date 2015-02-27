@@ -12,10 +12,10 @@ import org.apache.flink.api.common.io.DelimitedInputFormat;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
+import org.apache.flink.types.parser.IntParser;
 
 import java.io.*;
 import java.nio.charset.Charset;
-import java.util.Iterator;
 import java.util.regex.Pattern;
 
 /**
@@ -103,17 +103,27 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
         String value = new String(bytes, offset, numBytes, this.charsetName);
 
         if (!StringUtils.isEmpty(value) && !StringUtils.startsWithAny(value, "//", "%")) {
-            Iterable<String> split = Splitter.on(WHITESPACE_PATTERN).split(value.trim());
-            Iterator<String> iterator = split.iterator();
+            //Iterable<String> split = Splitter.on(WHITESPACE_PATTERN).split(value.trim());
+            //Iterator<String> iterator = split.iterator();
             try {
-                int row = Integer.parseInt(iterator.next()) + indexOffset;
-                int column = Integer.parseInt(iterator.next()) + indexOffset;
+                int start = offset;
+                while (bytes[start] == ' ' && start < offset + numBytes) start++;
+                int row = IntParser.parseField(bytes, start, numBytes, ' ')  + indexOffset;
+
+                // now iterate further
+                while (bytes[start] != ' ' && start < offset + numBytes) start++;
+                while (bytes[start] == ' ' && start < offset + numBytes) start++;
+
+                int column = IntParser.parseField(bytes, start, numBytes, ' ')  + indexOffset;
+
+            //    int row = Integer.parseInt(iterator.next()) + indexOffset;
+            //    int column = Integer.parseInt(iterator.next()) + indexOffset;
                 double matrixEntry;
-                if(iterator.hasNext()) {
-                matrixEntry = Double.parseDouble(iterator.next());
-                } else {
+                //if(iterator.hasNext()) {
+                //matrixEntry = Double.parseDouble(iterator.next());
+                //} else {
                   matrixEntry = 1;
-                }
+                //}
 
                 if (row - indexOffset == size) {
                     // this element is the matrix size -- skip it

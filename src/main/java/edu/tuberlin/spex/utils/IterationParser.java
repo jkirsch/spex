@@ -188,8 +188,8 @@ public class IterationParser {
                     }
                 }
 
-                Matcher startOf = startOfSomething.matcher(line);
-               /* if(startOf.find()) {
+               /*  Matcher startOf = startOfSomething.matcher(line);
+               if(startOf.find()) {
                     // we have TIC or TOC
                     String identifier = startOf.group(1);
                     long timeStamp = getDate(line).getTime();
@@ -277,7 +277,7 @@ public class IterationParser {
             Tuple2<Long, Long> pair = ticToc.get(identifier);
             pair.f0 = Math.min(pair.f0, timeStamp);
         } else {
-            ticToc.put(identifier, new Tuple2<Long, Long>(timeStamp, 0L));
+            ticToc.put(identifier, new Tuple2<>(timeStamp, 0L));
         }
     }
 

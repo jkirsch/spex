@@ -2,6 +2,8 @@ package edu.tuberlin.spex.matrix.serializer;
 
 import org.apache.flink.api.java.ExecutionEnvironment;
 
+import java.util.BitSet;
+
 /**
  * Date: 12.02.2015
  * Time: 22:09
@@ -22,6 +24,8 @@ public class SerializerRegistry {
         env.addDefaultKryoSerializer(MatrixBlock.class, MatrixBlockSerializer.class); */
         //env.addDefaultKryoSerializer(AdaptedCompRowMatrix.class, AdaptedCompRowMatrixSerializer.class);
         //env.addDefaultKryoSerializer(VectorBlock.class, VectorBlockSerializer.class);
+
+        env.addDefaultKryoSerializer(BitSet.class, ArrayBitSetSerializer.class);
 
     }
 }

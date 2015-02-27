@@ -11,7 +11,6 @@ import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockReducer;
 import edu.tuberlin.spex.matrix.serializer.SerializerRegistry;
 import edu.tuberlin.spex.utils.ParallelVectorIterator;
-import edu.tuberlin.spex.utils.TicToc;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import no.uib.cipr.matrix.Vector;
 import org.apache.commons.lang3.ArrayUtils;
@@ -28,7 +27,6 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
-import org.apache.flink.runtime.util.EnvironmentInformation;
 import org.apache.flink.util.Collector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,16 +46,16 @@ public class FlinkMatrixReader implements Serializable {
     public static void main(String[] args) throws Exception {
 
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-        EnvironmentInformation.logEnvironmentInfo(LOG, "FlinkMatrixReader");
+//        EnvironmentInformation.logEnvironmentInfo(LOG, "FlinkMatrixReader");
 
         SerializerRegistry.register(env);
 
         FlinkMatrixReader flinkMatrixReader = new FlinkMatrixReader();
 
         double alpha = 0.85;
-        String path = "datasets/webNotreDame.mtx";
+        String path = "datasets/webBerkStan.mtx";
 
-        int[] blockSizes = new int[]{4};
+        int[] blockSizes = new int[]{2};
 
         if (args.length > 0) {
             path = args[0];
@@ -127,8 +125,8 @@ public class FlinkMatrixReader implements Serializable {
         AggregateOperator<Tuple2<Integer, Double>> colSumsDataSet = input.<Tuple2<Integer, Double>>project(1, 2).name("Select column id").groupBy(0).aggregate(Aggregations.SUM, 1).name("Calculate ColSums");
 
         // transform the aggregated sums into a vector which is 1 for all non entries
-        GroupReduceOperator<Tuple2<Integer, Double>, BitSet> personalizationVector = colSumsDataSet.reduceGroup(new RichGroupReduceFunction<Tuple2<Integer, Double>, BitSet>() {
-            @Override
+        GroupReduceOperator<Tuple2<Integer, Double>, BitSet> personalizationVector = colSumsDataSet.reduceGroup(new GroupReduceFunction<Tuple2<Integer, Double>, BitSet>() {
+    /*        @Override
             public void open(Configuration parameters) throws Exception {
                 TicToc.tic("Build personalization Vector", "starting");
             }
@@ -136,12 +134,13 @@ public class FlinkMatrixReader implements Serializable {
             @Override
             public void close() throws Exception {
                 TicToc.toc("Build personalization Vector", "finished");;
-            }
+            }*/
 
             @Override
             public void reduce(Iterable<Tuple2<Integer, Double>> values, Collector<BitSet> out) throws Exception {
                 //SparseVector personalizationVector = new SparseVector(VectorHelper.ones(n));
                 BitSet bitSet = new BitSet(n);
+
                 for (Tuple2<Integer, Double> entry : values) {
                     bitSet.set(entry.f0);
                 }
@@ -153,6 +152,7 @@ public class FlinkMatrixReader implements Serializable {
                 bitSet.flip(0, n);
 
                 //out.collect(personalizationVector);
+
                 out.collect(bitSet);
             }
         }).name("Build personalization Vector");
@@ -171,7 +171,7 @@ public class FlinkMatrixReader implements Serializable {
 
                     @Override
                     public Tuple4<Integer, Integer, Double, Long> map(Tuple3<Integer, Integer, Double> input) throws Exception {
-                        return new Tuple4<Integer, Integer, Double, Long>(input.f0, input.f1, input.f2, matrixBlockPartitioner.getKey(input));
+                        return new Tuple4<>(input.f0, input.f1, input.f2, matrixBlockPartitioner.getKey(input));
                     }
                 }).withForwardedFields("0->0; 1->1; 2->2")
                 .groupBy(3).sortGroup(0, Order.ASCENDING).sortGroup(1, Order.ASCENDING);//.sortGroup(1, Order.ASCENDING);
@@ -313,9 +313,7 @@ public class FlinkMatrixReader implements Serializable {
         List<VectorBlock> resultCollector = new ArrayList<>();
         result.output(new LocalCollectionOutputFormat<>(resultCollector));
 
-        String executionPlan = env.getExecutionPlan();
-
-        System.out.println(executionPlan);
+//        System.out.println(env.getExecutionPlan());
 
         Stopwatch stopwatch = new Stopwatch().start();
         JobExecutionResult execute = env.execute("Pagerank");

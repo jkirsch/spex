@@ -1,0 +1,13 @@
+set palette grey
+set pal def (0 "white", 1 "black")
+#set xrange [0:]
+#set yrange [0:]
+
+
+plot 'map_32x32.matrix' matrix with image
+
+
+binwidth=30
+bin(x,width)=width*floor(x/width)
+
+plot 'map_32x32.matrix' using (bin($1,binwidth)):(1.0) smooth freq with boxes 10p

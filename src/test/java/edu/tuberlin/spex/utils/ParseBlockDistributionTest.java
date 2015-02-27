@@ -6,6 +6,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.io.Resources;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Ints;
+import no.uib.cipr.matrix.DenseMatrix;
 import org.apache.commons.math3.random.EmpiricalDistribution;
 import org.junit.Test;
 
@@ -58,13 +59,25 @@ public class ParseBlockDistributionTest {
             List<Integer> blocks = new ArrayList<>();
             Matcher matcher = pattern.matcher(yep.group(2));
 
+            // we now have the values . create heatmap
+            DenseMatrix matrix = new DenseMatrix(size, size);
+
             while (matcher.find()) {
                 Integer blockId = Ints.tryParse(matcher.group(1));
                 Double counts = Doubles.tryParse(matcher.group(2));
                 doubles.add(counts);
                 blocks.add(blockId);
+
+                // get the row and the column from the blockID
+
+                matrix.set(size - blockId / size - 1, blockId % size, counts);
+
             }
+
+            System.out.println(matrix);
+
             double[] values = new double[doubles.size()];
+
             int pos = -1;
             for (Double aDouble : doubles) {
                 values[++pos] = aDouble;
@@ -78,9 +91,13 @@ public class ParseBlockDistributionTest {
 
             System.out.println(empiricalDistribution.getSampleStats());
 
+
         }
 
         System.out.println(stringBuilder.toString());
 
     }
+
+
+
 }

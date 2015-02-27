@@ -50,7 +50,7 @@ public class MatrixBlockPartitioner implements KeySelector<Tuple3<Integer, Integ
             rowIndex = row * blocks;
         }
         if(value.f1 >= blockSize * blocks) {
-          column =  blocks -1;
+          column =  blocks - 1;
         }
 
         return rowIndex  + column;
