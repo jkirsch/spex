@@ -30,7 +30,7 @@
         <flink.version>0.9-SNAPSHOT</flink.version>
         <spring.boot.version>1.2.2.RELEASE</spring.boot.version>
 
-        <guava.version>14.0.1</guava.version>
+        <guava.version>18.0</guava.version>
 
         <!-- COPIED FROM FLINK MASTER-->
         <!-- Need to use a user property here because the surefire/failsafe

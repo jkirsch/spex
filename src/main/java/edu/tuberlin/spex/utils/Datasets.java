@@ -63,7 +63,7 @@ public class Datasets {
         LOG.info("Downloading {}", location);
         URL website = new URL(location);
 
-        Stopwatch stopwatch = new Stopwatch().start();
+        Stopwatch stopwatch = Stopwatch.createStarted();
         ReadableByteChannel rbc = Channels.newChannel(website.openStream());
 
         File dir = new File(targetDirectory);

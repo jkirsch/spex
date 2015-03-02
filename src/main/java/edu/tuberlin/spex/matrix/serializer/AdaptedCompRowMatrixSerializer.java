@@ -26,8 +26,8 @@ public class AdaptedCompRowMatrixSerializer extends Serializer<AdaptedCompRowMat
         output.writeInt(matrix.getRowPointer().length);
         output.writeInts(matrix.getRowPointer(), true);
 
-        output.writeInt(matrix.getData().length);
-        output.writeDoubles(matrix.getData());
+   /*     output.writeInt(matrix.getData().length);
+        output.writeDoubles(matrix.getData());*/
     }
 
     @Override
@@ -44,7 +44,9 @@ public class AdaptedCompRowMatrixSerializer extends Serializer<AdaptedCompRowMat
         int dataSize = input.readInt();
         double[] data = input.readDoubles(dataSize);
 
-        return new AdaptedCompRowMatrix(rows, columns, data, columnIndices, rowPointer);
+        return null;
+
+     /*   return new AdaptedCompRowMatrix(rows, columns, data, columnIndices, rowPointer);*/
     }
 
 

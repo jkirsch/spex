@@ -46,7 +46,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
     /**
      * Matrix data
      */
-    double[] data;
+    DoubleBuffer data;
 
     /**
      * Column indices. These are kept sorted within each row.
@@ -152,7 +152,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
     public AdaptedCompRowMatrix(int numRows, int numColumns, double[] data, int[] columnIndex, int[] rowPointer) {
         super(numRows, numColumns);
-        this.data = data;
+        this.data = DoubleBuffer.wrap(data);
         this.columnIndex = columnIndex;
         this.rowPointer = rowPointer;
     }
@@ -194,7 +194,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
         rowPointer = new int[numRows + 1];
         columnIndex = new int[nnz];
-        data = new double[nnz];
+        //data = new double[nnz];
 
         if (nz.length != numRows)
             throw new IllegalArgumentException("nz.length != numRows");
@@ -221,7 +221,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
         rowPointer = new int[numRows + 1];
         columnIndex = new int[nnz];
-        this.data = data;
+        this.data = DoubleBuffer.wrap(data);
 
         if (nz.length != numRows)
             throw new IllegalArgumentException("nz.length != numRows");
@@ -245,11 +245,11 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         if (deep) {
             if (A instanceof AdaptedCompRowMatrix) {
                 AdaptedCompRowMatrix Ac = (AdaptedCompRowMatrix) A;
-                data = new double[Ac.data.length];
+                data = Ac.data.duplicate();//new double[Ac.data.capacity()];
                 columnIndex = new int[Ac.columnIndex.length];
                 rowPointer = new int[Ac.rowPointer.length];
 
-                System.arraycopy(Ac.data, 0, data, 0, data.length);
+                System.arraycopy(Ac.data, 0, data, 0, data.capacity());
                 System.arraycopy(Ac.columnIndex, 0, columnIndex, 0,
                         columnIndex.length);
                 System.arraycopy(Ac.rowPointer, 0, rowPointer, 0,
@@ -279,7 +279,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             AdaptedCompRowMatrix Ac = (AdaptedCompRowMatrix) A;
             columnIndex = Ac.getColumnIndices();
             rowPointer = Ac.getRowPointers();
-            data = Ac.getData();
+            data = Ac.data;//getData();
         }
     }
 
@@ -324,9 +324,9 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
     /**
      * Returns the internal data storage
      */
-    public double[] getData() {
+   /* public double[] getData() {
         return data;
-    }
+    }*/
 
     @Override
     public Matrix mult(Matrix B, Matrix C) {
@@ -339,7 +339,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             for (int j = 0; j < C.numColumns(); ++j) {
                 double dot = 0;
                 for (int k = rowPointer[i]; k < rowPointer[i + 1]; ++k) {
-                    dot += data[k] * B.get(columnIndex[k], j);
+                    dot += data.get(k) * B.get(columnIndex[k], j);
                 }
                 if (dot != 0) {
                     C.set(i, j, dot);
@@ -362,7 +362,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             for (int i = 0; i < numRows; ++i) {
                 double dot = 0;
                 for (int j = rowPointer[i]; j < rowPointer[i + 1]; j++) {
-                    dot += data[j] * xd[columnIndex[j]];
+                    dot += data.get(j) * xd[columnIndex[j]];
                 }
                 if (dot != 0) {
                     y.set(i, dot);
@@ -377,7 +377,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         for (int i = 0; i < numRows; ++i) {
             double dot = 0;
             for (int j = rowPointer[i]; j < rowPointer[i + 1]; j++) {
-                dot += data[j] * x.get(columnIndex[j]);
+                dot += data.get(j) * x.get(columnIndex[j]);
             }
             y.set(i, dot);
         }
@@ -397,7 +397,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         for (int i = 0; i < numRows; ++i) {
             double dot = 0;
             for (int j = rowPointer[i]; j < rowPointer[i + 1]; ++j)
-                dot += data[j] * xd[columnIndex[j]];
+                dot += data.get(j) * xd[columnIndex[j]];
             yd[i] += alpha * dot;
         }
 
@@ -418,7 +418,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
         for (int i = 0; i < numRows; ++i)
             for (int j = rowPointer[i]; j < rowPointer[i + 1]; ++j)
-                yd[columnIndex[j]] += data[j] * xd[i];
+                yd[columnIndex[j]] += data.get(j) * xd[i];
 
         return y;
     }
@@ -439,7 +439,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         // y = A'x + y
         for (int i = 0; i < numRows; ++i)
             for (int j = rowPointer[i]; j < rowPointer[i + 1]; ++j)
-                yd[columnIndex[j]] += data[j] * xd[i];
+                yd[columnIndex[j]] += data.get(j) * xd[i];
 
         // y = alpha*y = alpha*A'x + y
         return y.scale(alpha);
@@ -450,7 +450,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         check(row, column);
 
         int index = getIndex(row, column);
-        data[index] = value;
+        throw new UnsupportedOperationException("Sorry");
+        //data.[index] = value;
     }
 
     @Override
@@ -458,7 +459,9 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         check(row, column);
 
         int index = getIndex(row, column);
-        data[index] += value;
+        throw new UnsupportedOperationException("Sorry");
+
+        //data[index] += value;
     }
 
     @Override
@@ -469,7 +472,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
                 rowPointer[row], rowPointer[row + 1], column);
 
         if (index >= 0)
-            return data[index];
+            return data.get(index);
         else
             return 0;
     }
@@ -489,7 +492,10 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
     @Override
     public AdaptedCompRowMatrix copy() {
-        return new AdaptedCompRowMatrix(this);
+
+        throw new UnsupportedOperationException("Sorry");
+
+        //return new AdaptedCompRowMatrix(this);
     }
 
     @Override
@@ -499,13 +505,16 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
     @Override
     public AdaptedCompRowMatrix zero() {
-        Arrays.fill(data, 0);
-        return this;
+        throw new UnsupportedOperationException("Sorry");
+        //Arrays.fill(data, 0);
+        //return this;
     }
 
     @Override
     public Matrix set(Matrix B) {
-        if (!(B instanceof AdaptedCompRowMatrix))
+        throw new UnsupportedOperationException("Sorry");
+
+   /*     if (!(B instanceof AdaptedCompRowMatrix))
             return super.set(B);
 
         checkSize(B);
@@ -524,7 +533,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         System.arraycopy(Bc.columnIndex, 0, columnIndex, 0, columnIndex.length);
         System.arraycopy(Bc.rowPointer, 0, rowPointer, 0, rowPointer.length);
 
-        return this;
+        return this;*/
     }
 
     /**
@@ -552,7 +561,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         }
 
         public boolean hasNext() {
-            return cursor < data.length;
+            return cursor < data.capacity();
         }
 
         public MatrixEntry next() {
@@ -607,11 +616,13 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         }
 
         public double get() {
-            return data[cursor];
+            return data.get(cursor);
         }
 
         public void set(double value) {
-            data[cursor] = value;
+            throw new UnsupportedOperationException("Sorry");
+
+//            data[cursor] = value;
         }
     }
 
@@ -641,8 +652,9 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
         nnz[lastRow] = ArrayUtils.toPrimitive(colIndicies.toArray(new Integer[colIndicies.size()]));
 
-        AdaptedCompRowMatrix constructed = new AdaptedCompRowMatrix(rows, cols, nnz);
-        constructed.data = ArrayUtils.toPrimitive(data.toArray(new Double[data.size()]));
+        AdaptedCompRowMatrix constructed = new AdaptedCompRowMatrix(rows, cols, nnz, ArrayUtils.toPrimitive(data.toArray(new Double[data.size()])));
+
+        //constructed.data = ArrayUtils.toPrimitive(data.toArray(new Double[data.size()]));
 
         return constructed;
 
@@ -657,7 +669,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         // write array sizes
         out.writeInt(columnIndex.length);
         out.writeInt(rowPointer.length);
-        out.writeInt(data.length);
+        out.writeInt(data.capacity());
 
         for (int i : columnIndex) {
             out.writeInt(i);
@@ -667,8 +679,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             out.writeInt(i);
         }
 
-        for (double v : data) {
-            out.writeDouble(v);
+        for (int i = 0; i < data.capacity(); i++) {
+            out.writeDouble(data.get(i));
         }
 
 
@@ -688,7 +700,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
         columnIndex = new int[colSize];
         rowPointer = new int[rowSize];
-        data = new double[dataSize];
+        //data = new double[dataSize];
 
 
         ByteBuffer byteBuffer = ByteBuffer.allocate(colSize * 4 + rowSize * 4 + dataSize * 8);
@@ -708,7 +720,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         byteBuffer.position(colSize * 4 + rowSize * 4);
 
         // the remaining
-        DoubleBuffer.wrap(data).put(byteBuffer.asDoubleBuffer());
+        data = byteBuffer.asDoubleBuffer();
+        //DoubleBuffer.wrap(data).put(byteBuffer.asDoubleBuffer());
 
 
         /*for (int i = 0; i < colSize; i++) {

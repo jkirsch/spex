@@ -34,7 +34,7 @@ public class TimingMatrixBlockVectorKernel extends RichMapFunction<Tuple2<Matrix
 
     @Override
     public VectorBlock map(Tuple2<MatrixBlock, VectorBlock> matrixBlockVectorBlockTuple2) throws Exception {
-        Stopwatch stopwatch = new Stopwatch().start();
+        Stopwatch stopwatch = Stopwatch.createStarted();
         VectorBlock vectorBlock = matrixBlockVectorBlockTuple2.f1;
         MatrixBlock matrixBlock = matrixBlockVectorBlockTuple2.f0;
         VectorBlock mult = (VectorBlock) matrixBlock.mult(vectorBlock);

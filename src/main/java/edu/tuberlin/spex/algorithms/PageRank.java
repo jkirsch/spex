@@ -31,7 +31,7 @@ public class PageRank {
 
     public Vector calc(Normalized normalized) {
 
-        Stopwatch stopwatch = new Stopwatch().start();
+        Stopwatch stopwatch = Stopwatch.createStarted();
 
         Matrix adjacency = normalized.columnNormalized;
         Vector dangling = normalized.danglingNodes;

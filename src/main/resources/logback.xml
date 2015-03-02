@@ -1,6 +1,5 @@
 <configuration>
     <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
-        <append>false</append>
         <encoder>
             <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{60} %X{sourceThread} - %msg%n</pattern>
             <!--<pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} %5p ${PID:- } - [%15.15t{14}] %-40.40logger{39} : %m%n%wex</pattern>-->
@@ -20,6 +19,6 @@
         <appender-ref ref="file"/>
     </root>
 
-    <logger name="com.esotericsoftware.kryo" level="TRACE"/>
+    <!--<logger name="com.esotericsoftware.kryo" level="TRACE"/>-->
     <!-- com.esotericsoftware.kryo TRACE-->
 </configuration>

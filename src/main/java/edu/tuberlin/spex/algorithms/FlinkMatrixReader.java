@@ -4,12 +4,16 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.math.DoubleMath;
 import com.google.common.primitives.Ints;
+import com.googlecode.javaewah.EWAHCompressedBitmap;
+import com.googlecode.javaewah.IntIterator;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
+import edu.tuberlin.spex.matrix.adapted.EWAHCompressedBitmapHolder;
 import edu.tuberlin.spex.matrix.kernel.NonTimingMatrixBlockVectorKernel;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockReducer;
 import edu.tuberlin.spex.matrix.serializer.SerializerRegistry;
+import edu.tuberlin.spex.utils.EWAHCompressedBitmapUtil;
 import edu.tuberlin.spex.utils.ParallelVectorIterator;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import no.uib.cipr.matrix.Vector;
@@ -53,9 +57,9 @@ public class FlinkMatrixReader implements Serializable {
         FlinkMatrixReader flinkMatrixReader = new FlinkMatrixReader();
 
         double alpha = 0.85;
-        String path = "datasets/webBerkStan.mtx";
+        String path = "datasets/webNotreDame.mtx";
 
-        int[] blockSizes = new int[]{2};
+        int[] blockSizes = new int[]{4};
 
         if (args.length > 0) {
             path = args[0];
@@ -117,7 +121,7 @@ public class FlinkMatrixReader implements Serializable {
         return resultCollector;
     }
 
-    public TimingResult executePageRank(ExecutionEnvironment env, final double alpha, final int blocks, DataSet<Tuple3<Integer, Integer, Double>> input, final int n, final int iteration) throws Exception {
+    public TimingResult executePageRank(ExecutionEnvironment env, final double alpha, final int blocks, final DataSet<Tuple3<Integer, Integer, Double>> input, final int n, final int iteration) throws Exception {
         final boolean transpose = true;
 
         final int adjustedN = n % blocks > 0 ? n + (blocks - n % blocks) : n;
@@ -125,7 +129,7 @@ public class FlinkMatrixReader implements Serializable {
         AggregateOperator<Tuple2<Integer, Double>> colSumsDataSet = input.<Tuple2<Integer, Double>>project(1, 2).name("Select column id").groupBy(0).aggregate(Aggregations.SUM, 1).name("Calculate ColSums");
 
         // transform the aggregated sums into a vector which is 1 for all non entries
-        GroupReduceOperator<Tuple2<Integer, Double>, BitSet> personalizationVector = colSumsDataSet.reduceGroup(new GroupReduceFunction<Tuple2<Integer, Double>, BitSet>() {
+        GroupReduceOperator<Tuple2<Integer, Double>, EWAHCompressedBitmapHolder> personalizationVector = colSumsDataSet.reduceGroup(new GroupReduceFunction<Tuple2<Integer, Double>, EWAHCompressedBitmapHolder>() {
     /*        @Override
             public void open(Configuration parameters) throws Exception {
                 TicToc.tic("Build personalization Vector", "starting");
@@ -137,23 +141,31 @@ public class FlinkMatrixReader implements Serializable {
             }*/
 
             @Override
-            public void reduce(Iterable<Tuple2<Integer, Double>> values, Collector<BitSet> out) throws Exception {
+            public void reduce(Iterable<Tuple2<Integer, Double>> values, Collector<EWAHCompressedBitmapHolder> out) throws Exception {
                 //SparseVector personalizationVector = new SparseVector(VectorHelper.ones(n));
-                BitSet bitSet = new BitSet(n);
+                //BitSet bitSet = new BitSet(n);
+
+                EWAHCompressedBitmapHolder ewahCompressedBitmap = new EWAHCompressedBitmapHolder();
+                ewahCompressedBitmap.not(); // all 1
 
                 for (Tuple2<Integer, Double> entry : values) {
-                    bitSet.set(entry.f0);
+                    //bitSet.set(entry.f0);
+                    ewahCompressedBitmap.set(entry.f0);
                 }
                 //for (Tuple2<Integer, Double> entry : values) {
                 //    personalizationVector.set(entry.f0, 0);
                 //}
                 //personalizationVector.compact();
                 // revert to get the ones that are dangling
-                bitSet.flip(0, n);
+                ewahCompressedBitmap.not();
+                ewahCompressedBitmap.trim();
+
+                //bitSet.flip(0, n);
 
                 //out.collect(personalizationVector);
+                //out.collect(bitSet);
 
-                out.collect(bitSet);
+                out.collect(ewahCompressedBitmap);
             }
         }).name("Build personalization Vector");
 
@@ -201,15 +213,15 @@ public class FlinkMatrixReader implements Serializable {
             }
         }).name("MatrixBlockVectorKernel"); */
 
-        MapOperator<Double, Double> personalization = iterate.crossWithTiny(personalizationVector).map(new MapFunction<Tuple2<VectorBlock, BitSet>, Double>() {
+        MapOperator<Double, Double> personalization = iterate.crossWithTiny(personalizationVector).map(new MapFunction<Tuple2<VectorBlock, EWAHCompressedBitmapHolder>, Double>() {
             @Override
-            public Double map(Tuple2<VectorBlock, BitSet> value) throws Exception {
+            public Double map(Tuple2<VectorBlock, EWAHCompressedBitmapHolder> value) throws Exception {
                 double sum = 0;
                 double scale = (1 - alpha) / (double) n;
                 //BitSet complete = value.f1;
-                BitSet complete = value.f1;
+                EWAHCompressedBitmapHolder complete = value.f1;
                 //DenseVector old = value.f0;
-                VectorBlock vector = value.f0;
+                final VectorBlock vector = value.f0;
 /*                for (int i = pV.nextSetBit(0); i != -1; i = pV.nextSetBit(i + 1)) {
                     sum += old.get(i);
                 }*/
@@ -218,11 +230,31 @@ public class FlinkMatrixReader implements Serializable {
                 //}
 
                 // cut out the bitset of interest
-                BitSet pV = complete.get(vector.getStartRow(), vector.getStartRow() + vector.size());
+                //BitSet pV = complete.get(vector.getStartRow(), vector.getStartRow() + vector.size());
 
-                for (int i = pV.nextSetBit(0); i != -1; i = pV.nextSetBit(i + 1)) {
-                    sum += vector.get(i);
+                //EWAHCompressedBitmap ewahCompressedBitmap = new EWAHCompressedBitmap();
+
+                // slice the window
+
+                EWAHCompressedBitmap slice = EWAHCompressedBitmapUtil.buildWindow(vector.getStartRow(), vector.size(), n);
+
+                EWAHCompressedBitmap view = slice.and(complete.getIntegers());
+
+                IntIterator intIterator = view.intIterator();
+                while (intIterator.hasNext()) {
+                    sum += vector.get(intIterator.next() - vector.getStartRow());
                 }
+
+/*                for (int i = vector.getStartRow(); i < vector.getStartRow() + vector.size(); i++) {
+                     if(complete.get(i)) {
+                         sum += vector.get(i - vector.getStartRow());
+                     }
+                }*/
+
+
+/*                for (int i = pV.nextSetBit(0); i != -1; i = pV.nextSetBit(i + 1)) {
+                    sum += vector.get(i);
+                }*/
 
 
                 //double persAdd = alpha * sum / (double) n;
@@ -315,7 +347,7 @@ public class FlinkMatrixReader implements Serializable {
 
 //        System.out.println(env.getExecutionPlan());
 
-        Stopwatch stopwatch = new Stopwatch().start();
+        Stopwatch stopwatch = Stopwatch.createStarted();
         JobExecutionResult execute = env.execute("Pagerank");
 
 
