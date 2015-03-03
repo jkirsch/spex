@@ -6,16 +6,17 @@ import com.google.common.collect.Iterables;
 import com.google.common.math.DoubleMath;
 import com.google.common.primitives.Ints;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
-import com.googlecode.javaewah.IntIterator;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
 import edu.tuberlin.spex.matrix.adapted.DanglingNodeInformation;
+import edu.tuberlin.spex.matrix.adapted.DanglingNodeInformationBitSet;
 import edu.tuberlin.spex.matrix.adapted.EWAHCompressedBitmapHolder;
 import edu.tuberlin.spex.matrix.kernel.NonTimingMatrixBlockVectorKernel;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockReducer;
 import edu.tuberlin.spex.matrix.serializer.SerializerRegistry;
 import edu.tuberlin.spex.utils.ParallelVectorIterator;
+import edu.tuberlin.spex.utils.Utils;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import no.uib.cipr.matrix.Vector;
 import org.apache.commons.lang3.ArrayUtils;
@@ -33,6 +34,7 @@ import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.util.Collector;
+import org.apache.flink.util.NumberSequenceIterator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +60,7 @@ public class FlinkMatrixReader implements Serializable {
         FlinkMatrixReader flinkMatrixReader = new FlinkMatrixReader();
 
         double alpha = 0.85;
-        String path = "datasets/webBerkStan.mtx";
+        String path = "datasets/webNotreDame.mtx";
 
         int[] blockSizes = new int[]{1,2,4,8,16,32,64,128};
 
@@ -131,7 +133,9 @@ public class FlinkMatrixReader implements Serializable {
 
         final DataSource<VectorBlock> denseVectorDataSource = env.fromParallelCollection(new ParallelVectorIterator(adjustedN, blocks, 1 / (double) n), VectorBlock.class);
 
-        FilterOperator<DanglingNodeInformation> personalizationVector = denseVectorDataSource.map(new RichMapFunction<VectorBlock, DanglingNodeInformation>() {
+        DataSource<Long> blocksCounter = env.fromParallelCollection(new NumberSequenceIterator(0, blocks - 1), Long.class);
+
+        FilterOperator<DanglingNodeInformationBitSet> personalizationVector = blocksCounter.map(new RichMapFunction<Long, DanglingNodeInformationBitSet>() {
 
             public BitSet bitSet;
 
@@ -147,38 +151,23 @@ public class FlinkMatrixReader implements Serializable {
             }
 
             @Override
-            public DanglingNodeInformation map(VectorBlock value) throws Exception {
+            public DanglingNodeInformationBitSet map(Long blockID) throws Exception {
                 // for each block create a sparse representation of the bitset
+                int startRow = Utils.safeLongToInt(blockID * (adjustedN / blocks));
+                DanglingNodeInformationBitSet danglingInformationBitSet = createNewDanglingInformationBitSet(adjustedN, n, blocks, startRow , bitSet);
 
-                DanglingNodeInformation danglingNodeInformation = createNewDanglingInformation(adjustedN, n, blocks, value.getStartRow());
+                if (danglingInformationBitSet.getBitSet().cardinality() > 0){
 
-                BitSet slice = bitSet.get(value.getStartRow(), value.getStartRow() + danglingNodeInformation.getEwahCompressedBitmapHolder().getIntegers().sizeInBits());
-                if (slice.cardinality() > 0){
-                    for (int i = slice.nextSetBit(0); i != -1; i = slice.nextSetBit(i + 1)) {
-                        danglingNodeInformation.getEwahCompressedBitmapHolder().getIntegers().set(i);
-                    }
-                    //slice.toLongArray()
-
-                    // return if needed
-
-                    danglingNodeInformation.getEwahCompressedBitmapHolder().trim();
-
-                    //System.out.println("HELLO " + danglingNodeInformation.startRow + " -DANGLING-> " + danglingNodeInformation.getEwahCompressedBitmapHolder().getIntegers().toString());
-                    //bitSet.flip(0, n);
-
-                    //out.collect(personalizationVector);
-                    //out.collect(bitSet);
-
-                    return danglingNodeInformation;
+                    return danglingInformationBitSet;
                 }
                 return null;
             }
-        }).withBroadcastSet(colSumsDataSet, "columnSums").filter(new FilterFunction<DanglingNodeInformation>() {
+        }).withBroadcastSet(colSumsDataSet, "columnSums").filter(new FilterFunction<DanglingNodeInformationBitSet>() {
             @Override
-            public boolean filter(DanglingNodeInformation value) throws Exception {
+            public boolean filter(DanglingNodeInformationBitSet value) throws Exception {
                 return value != null;
             }
-        }).returns(DanglingNodeInformation.class).name("Build personalization Vector");
+        }).returns(DanglingNodeInformationBitSet.class).name("Build personalization Vector");
 
 
         // transform the aggregated sums into a vector which is 1 for all non-entries
@@ -298,13 +287,13 @@ public class FlinkMatrixReader implements Serializable {
             }
         }).name("MatrixBlockVectorKernel"); */
 
-        MapOperator<Double, Double> personalization = iterate.joinWithTiny(personalizationVector).where("startRow").equalTo("startRow").map(new MapFunction<Tuple2<VectorBlock, DanglingNodeInformation>, Double>() {
+        MapOperator<Double, Double> personalization = iterate.joinWithTiny(personalizationVector).where("startRow").equalTo("startRow").map(new MapFunction<Tuple2<VectorBlock, DanglingNodeInformationBitSet>, Double>() {
             @Override
-            public Double map(Tuple2<VectorBlock, DanglingNodeInformation> value) throws Exception {
+            public Double map(Tuple2<VectorBlock, DanglingNodeInformationBitSet> value) throws Exception {
                 double sum = 0;
                 double scale = (1 - alpha) / (double) n;
                 //BitSet complete = value.f1;
-                EWAHCompressedBitmapHolder view = value.f1.getEwahCompressedBitmapHolder();
+                BitSet pV = value.f1.getBitSet();
                 //DenseVector old = value.f0;
                 final VectorBlock vector = value.f0;
 
@@ -326,10 +315,14 @@ public class FlinkMatrixReader implements Serializable {
 
                 EWAHCompressedBitmap view = slice.and(complete.getIntegers());*/
 
-                IntIterator intIterator = view.getIntegers().intIterator();
+                for (int i = pV.nextSetBit(0); i != -1; i = pV.nextSetBit(i + 1)) {
+                    sum += vector.get(i);
+                }
+
+/*                IntIterator intIterator = view.igetIntegers().intIterator();
                 while (intIterator.hasNext()) {
                     sum += vector.get(intIterator.next());
-                }
+                }*/
 
 /*                for (int i = vector.getStartRow(); i < vector.getStartRow() + vector.size(); i++) {
                      if(complete.get(i)) {
@@ -506,6 +499,26 @@ public class FlinkMatrixReader implements Serializable {
         danglingNodeInformation.setStartRow(startRow);
 
         return danglingNodeInformation;
+    }
+
+    private static DanglingNodeInformationBitSet createNewDanglingInformationBitSet(int adjustedN, int n, int blocks, int f0, BitSet bitSet) {
+
+        int startRow = f0 / (adjustedN / blocks) * (adjustedN / blocks);
+
+        // the last entry is smaller
+        int limit = adjustedN / blocks;
+        if (startRow + (adjustedN / blocks) > n) {
+            limit = (int) (n % Math.ceil(n / (double) blocks));
+        }
+
+        DanglingNodeInformationBitSet danglingNodeInformationBitSet = new DanglingNodeInformationBitSet();
+
+        BitSet slice = bitSet.get(startRow, startRow + limit);
+
+        danglingNodeInformationBitSet.setStartRow(startRow);
+        danglingNodeInformationBitSet.setBitSet(slice);
+
+        return danglingNodeInformationBitSet;
     }
 
     private static void emitIfNeeded(DanglingNodeInformation danglingNodeInformation, Collector<DanglingNodeInformation> out) {

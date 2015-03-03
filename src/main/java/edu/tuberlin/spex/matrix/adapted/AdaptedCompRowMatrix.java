@@ -194,7 +194,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
         int rowPointer[] = new int[numRows + 1];
         int columnIndex[] = new int[nnz];
-        //data = new double[nnz];
+        data = DoubleBuffer.wrap(new double[nnz]);
 
         if (nz.length != numRows)
             throw new IllegalArgumentException("nz.length != numRows");
@@ -458,8 +458,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         check(row, column);
 
         int index = getIndex(row, column);
-        throw new UnsupportedOperationException("Sorry");
-        //data.[index] = value;
+
+        data.put(index,value);
     }
 
     @Override
@@ -513,16 +513,14 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
     @Override
     public AdaptedCompRowMatrix zero() {
-        throw new UnsupportedOperationException("Sorry");
-        //Arrays.fill(data, 0);
-        //return this;
+        data = DoubleBuffer.wrap(new double[data.limit()]);
+        return this;
     }
 
     @Override
     public Matrix set(Matrix B) {
-        throw new UnsupportedOperationException("Sorry");
 
-   /*     if (!(B instanceof AdaptedCompRowMatrix))
+        if (!(B instanceof AdaptedCompRowMatrix))
             return super.set(B);
 
         checkSize(B);
@@ -530,18 +528,18 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         AdaptedCompRowMatrix Bc = (AdaptedCompRowMatrix) B;
 
         // Reallocate matrix structure, if necessary
-        if (Bc.columnIndex.length != columnIndex.length
-                || Bc.rowPointer.length != rowPointer.length) {
-            data = new double[Bc.data.length];
-            columnIndex = new int[Bc.columnIndex.length];
-            rowPointer = new int[Bc.rowPointer.length];
+        if (Bc.columnIndex.limit() != columnIndex.limit()
+                || Bc.rowPointer.limit() != rowPointer.limit()) {
+            data = DoubleBuffer.wrap(new double[Bc.data.capacity()]);
+            columnIndex = IntBuffer.wrap(new int[Bc.columnIndex.limit()]);
+            rowPointer = IntBuffer.wrap(new int[Bc.rowPointer.limit()]);
         }
 
-        System.arraycopy(Bc.data, 0, data, 0, data.length);
-        System.arraycopy(Bc.columnIndex, 0, columnIndex, 0, columnIndex.length);
-        System.arraycopy(Bc.rowPointer, 0, rowPointer, 0, rowPointer.length);
+        System.arraycopy(Bc.data.array(), 0, data.array(), 0, data.capacity());
+        System.arraycopy(Bc.columnIndex.array(), 0, columnIndex.array(), 0, columnIndex.limit());
+        System.arraycopy(Bc.rowPointer.array(), 0, rowPointer.array(), 0, rowPointer.limit());
 
-        return this;*/
+        return this;
     }
 
     /**
@@ -641,7 +639,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
         // The nonzero column indices on each row
         int[][] nnz = new int[rows][0];
-        ArrayList<Object> colIndicies = new ArrayList<>();
+        ArrayList<Object> colIndices = new ArrayList<>();
 
         while (values.hasNext()) {
             Tuple3<Integer, Integer, Double> value = values.next();
@@ -650,15 +648,15 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             if(value.f0 > lastRow && lastRow > -1) {
                 Preconditions.checkArgument(lastRow < value.f0, "We need a sorted list");
                 // flush last row
-               nnz[lastRow] = ArrayUtils.toPrimitive(colIndicies.toArray(new Integer[colIndicies.size()]));
-               colIndicies.clear();
+               nnz[lastRow] = ArrayUtils.toPrimitive(colIndices.toArray(new Integer[colIndices.size()]));
+               colIndices.clear();
             }
 
-            colIndicies.add(value.f1);
+            colIndices.add(value.f1);
             lastRow = value.f0;
         }
 
-        nnz[lastRow] = ArrayUtils.toPrimitive(colIndicies.toArray(new Integer[colIndicies.size()]));
+        nnz[lastRow] = ArrayUtils.toPrimitive(colIndices.toArray(new Integer[colIndices.size()]));
 
         AdaptedCompRowMatrix constructed = new AdaptedCompRowMatrix(rows, cols, nnz, ArrayUtils.toPrimitive(data.toArray(new Double[data.size()])));
 

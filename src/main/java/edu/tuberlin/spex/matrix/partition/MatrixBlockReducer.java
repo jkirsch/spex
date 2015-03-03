@@ -96,9 +96,9 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, 
 
                 value.f0 -= blockDimensions.getRowStart();
                 value.f1 -= blockDimensions.getColStart();
-                value.f2 = matrixEntry;
+                //value.f2 = matrixEntry;
 
-                return new Tuple3<>(value.f0, value.f1, value.f2);
+                return new Tuple3<>(value.f0, value.f1, matrixEntry);
             }
         });
 
