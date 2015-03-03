@@ -2,18 +2,19 @@ package edu.tuberlin.spex.algorithms;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
+import com.google.common.collect.Iterables;
 import com.google.common.math.DoubleMath;
 import com.google.common.primitives.Ints;
 import com.googlecode.javaewah.EWAHCompressedBitmap;
 import com.googlecode.javaewah.IntIterator;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
+import edu.tuberlin.spex.matrix.adapted.DanglingNodeInformation;
 import edu.tuberlin.spex.matrix.adapted.EWAHCompressedBitmapHolder;
 import edu.tuberlin.spex.matrix.kernel.NonTimingMatrixBlockVectorKernel;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockReducer;
 import edu.tuberlin.spex.matrix.serializer.SerializerRegistry;
-import edu.tuberlin.spex.utils.EWAHCompressedBitmapUtil;
 import edu.tuberlin.spex.utils.ParallelVectorIterator;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import no.uib.cipr.matrix.Vector;
@@ -57,9 +58,9 @@ public class FlinkMatrixReader implements Serializable {
         FlinkMatrixReader flinkMatrixReader = new FlinkMatrixReader();
 
         double alpha = 0.85;
-        String path = "datasets/webNotreDame.mtx";
+        String path = "datasets/webBerkStan.mtx";
 
-        int[] blockSizes = new int[]{4};
+        int[] blockSizes = new int[]{1,2,4,8,16,32,64,128};
 
         if (args.length > 0) {
             path = args[0];
@@ -121,15 +122,72 @@ public class FlinkMatrixReader implements Serializable {
         return resultCollector;
     }
 
-    public TimingResult executePageRank(ExecutionEnvironment env, final double alpha, final int blocks, final DataSet<Tuple3<Integer, Integer, Double>> input, final int n, final int iteration) throws Exception {
+    public TimingResult executePageRank(final ExecutionEnvironment env, final double alpha, final int blocks, final DataSet<Tuple3<Integer, Integer, Double>> input, final int n, final int iteration) throws Exception {
         final boolean transpose = true;
 
         final int adjustedN = n % blocks > 0 ? n + (blocks - n % blocks) : n;
 
         AggregateOperator<Tuple2<Integer, Double>> colSumsDataSet = input.<Tuple2<Integer, Double>>project(1, 2).name("Select column id").groupBy(0).aggregate(Aggregations.SUM, 1).name("Calculate ColSums");
 
-        // transform the aggregated sums into a vector which is 1 for all non entries
-        GroupReduceOperator<Tuple2<Integer, Double>, EWAHCompressedBitmapHolder> personalizationVector = colSumsDataSet.reduceGroup(new GroupReduceFunction<Tuple2<Integer, Double>, EWAHCompressedBitmapHolder>() {
+        final DataSource<VectorBlock> denseVectorDataSource = env.fromParallelCollection(new ParallelVectorIterator(adjustedN, blocks, 1 / (double) n), VectorBlock.class);
+
+        FilterOperator<DanglingNodeInformation> personalizationVector = denseVectorDataSource.map(new RichMapFunction<VectorBlock, DanglingNodeInformation>() {
+
+            public BitSet bitSet;
+
+            @Override
+            public void open(Configuration parameters) throws Exception {
+                List<Tuple2<Integer, Double>> aggregatedSums = getRuntimeContext().getBroadcastVariable("columnSums");
+
+                bitSet = new BitSet(n);
+                for (Tuple2<Integer, Double> aggregatedSum : aggregatedSums) {
+                    bitSet.set(aggregatedSum.f0);
+                }
+                bitSet.flip(0, n);
+            }
+
+            @Override
+            public DanglingNodeInformation map(VectorBlock value) throws Exception {
+                // for each block create a sparse representation of the bitset
+
+                DanglingNodeInformation danglingNodeInformation = createNewDanglingInformation(adjustedN, n, blocks, value.getStartRow());
+
+                BitSet slice = bitSet.get(value.getStartRow(), value.getStartRow() + danglingNodeInformation.getEwahCompressedBitmapHolder().getIntegers().sizeInBits());
+                if (slice.cardinality() > 0){
+                    for (int i = slice.nextSetBit(0); i != -1; i = slice.nextSetBit(i + 1)) {
+                        danglingNodeInformation.getEwahCompressedBitmapHolder().getIntegers().set(i);
+                    }
+                    //slice.toLongArray()
+
+                    // return if needed
+
+                    danglingNodeInformation.getEwahCompressedBitmapHolder().trim();
+
+                    //System.out.println("HELLO " + danglingNodeInformation.startRow + " -DANGLING-> " + danglingNodeInformation.getEwahCompressedBitmapHolder().getIntegers().toString());
+                    //bitSet.flip(0, n);
+
+                    //out.collect(personalizationVector);
+                    //out.collect(bitSet);
+
+                    return danglingNodeInformation;
+                }
+                return null;
+            }
+        }).withBroadcastSet(colSumsDataSet, "columnSums").filter(new FilterFunction<DanglingNodeInformation>() {
+            @Override
+            public boolean filter(DanglingNodeInformation value) throws Exception {
+                return value != null;
+            }
+        }).returns(DanglingNodeInformation.class).name("Build personalization Vector");
+
+
+        // transform the aggregated sums into a vector which is 1 for all non-entries
+  /*      GroupReduceOperator<Tuple2<Integer, Integer>, DanglingNodeInformation> personalizationVector = colSumsDataSet.map(new MapFunction<Tuple2<Integer,Double>, Tuple2<Integer, Integer>>() {
+            @Override
+            public Tuple2<Integer, Integer> map(Tuple2<Integer, Double> value) throws Exception {
+                return new Tuple2<>(value.f0, value.f0 / (adjustedN / blocks));
+            }
+        }).sortPartition(0, Order.ASCENDING).reduceGroup(new GroupReduceFunction<Tuple2<Integer, Integer>, DanglingNodeInformation>() {*/
     /*        @Override
             public void open(Configuration parameters) throws Exception {
                 TicToc.tic("Build personalization Vector", "starting");
@@ -140,34 +198,62 @@ public class FlinkMatrixReader implements Serializable {
                 TicToc.toc("Build personalization Vector", "finished");;
             }*/
 
-            @Override
-            public void reduce(Iterable<Tuple2<Integer, Double>> values, Collector<EWAHCompressedBitmapHolder> out) throws Exception {
+        /*    @Override
+            public void reduce(Iterable<Tuple2<Integer, Integer>> values, Collector<DanglingNodeInformation> out) throws Exception {
                 //SparseVector personalizationVector = new SparseVector(VectorHelper.ones(n));
                 //BitSet bitSet = new BitSet(n);
 
-                EWAHCompressedBitmapHolder ewahCompressedBitmap = new EWAHCompressedBitmapHolder();
-                ewahCompressedBitmap.not(); // all 1
+                // we need to peek to find the startrow
+                PeekingIterator<Tuple2<Integer, Integer>> peekingIterator = Iterators.peekingIterator(values.iterator());
 
-                for (Tuple2<Integer, Double> entry : values) {
+                // we assume that all elements in the group belong to the same partition in the matrix
+                // so we can just pick the first one and estimate the block dimensions
+                Tuple2<Integer, Integer> peek = peekingIterator.peek();
+
+                DanglingNodeInformation danglingNodeInformation = createNewDanglingInformation(adjustedN, n, blocks, peek.f0);
+
+                int last = Integer.MIN_VALUE;
+
+                while (peekingIterator.hasNext()) {
+                    Tuple2<Integer, Integer> entry = peekingIterator.next();
                     //bitSet.set(entry.f0);
-                    ewahCompressedBitmap.set(entry.f0);
+
+                    if(entry.f0 < last) {
+                        throw new IllegalStateException("SORT?");
+                    }
+                    last = entry.f0;
+
+                    // new block
+                    int blockSize = adjustedN / blocks;
+                    if(entry.f0 >= danglingNodeInformation.startRow + blockSize) {
+                        // new block - maybe many
+
+
+                        emitIfNeeded(danglingNodeInformation, out);
+                        danglingNodeInformation = createNewDanglingInformation(adjustedN, n, blocks, danglingNodeInformation.getStartRow() + blockSize);
+                        while (entry.f0 >= danglingNodeInformation.startRow + blockSize) {
+                            emitIfNeeded(danglingNodeInformation, out);
+                            danglingNodeInformation = createNewDanglingInformation(adjustedN, n, blocks, danglingNodeInformation.getStartRow() + blockSize);
+                        }
+
+                    }
+
+                    //System.out.println("HELLO " + danglingNodeInformation.startRow + " -- " + entry);
+                    if(entry.f0 - danglingNodeInformation.getStartRow() < 0 ) {
+                        System.out.println();
+                    }
+                    danglingNodeInformation.set(entry.f0);
                 }
                 //for (Tuple2<Integer, Double> entry : values) {
                 //    personalizationVector.set(entry.f0, 0);
                 //}
                 //personalizationVector.compact();
                 // revert to get the ones that are dangling
-                ewahCompressedBitmap.not();
-                ewahCompressedBitmap.trim();
+                emitIfNeeded(danglingNodeInformation, out);
 
-                //bitSet.flip(0, n);
 
-                //out.collect(personalizationVector);
-                //out.collect(bitSet);
-
-                out.collect(ewahCompressedBitmap);
             }
-        }).name("Build personalization Vector");
+        }).returns(DanglingNodeInformation.class).name("Build personalization Vector");*/
 
 
         SortedGrouping<Tuple4<Integer, Integer, Double, Long>> tuple3UnsortedGrouping = input
@@ -201,7 +287,6 @@ public class FlinkMatrixReader implements Serializable {
 
         //final DataSource<VectorBlock> denseVectorDataSource = env.fromCollection(VectorBlockHelper.createBlocks(adjustedN, blocks, 1 / (double) n));
 
-        final DataSource<VectorBlock> denseVectorDataSource = env.fromParallelCollection(new ParallelVectorIterator(adjustedN, blocks, 1 / (double) n), VectorBlock.class);
 
         final IterativeDataSet<VectorBlock> iterate = denseVectorDataSource.iterate(iteration);
 
@@ -213,15 +298,16 @@ public class FlinkMatrixReader implements Serializable {
             }
         }).name("MatrixBlockVectorKernel"); */
 
-        MapOperator<Double, Double> personalization = iterate.crossWithTiny(personalizationVector).map(new MapFunction<Tuple2<VectorBlock, EWAHCompressedBitmapHolder>, Double>() {
+        MapOperator<Double, Double> personalization = iterate.joinWithTiny(personalizationVector).where("startRow").equalTo("startRow").map(new MapFunction<Tuple2<VectorBlock, DanglingNodeInformation>, Double>() {
             @Override
-            public Double map(Tuple2<VectorBlock, EWAHCompressedBitmapHolder> value) throws Exception {
+            public Double map(Tuple2<VectorBlock, DanglingNodeInformation> value) throws Exception {
                 double sum = 0;
                 double scale = (1 - alpha) / (double) n;
                 //BitSet complete = value.f1;
-                EWAHCompressedBitmapHolder complete = value.f1;
+                EWAHCompressedBitmapHolder view = value.f1.getEwahCompressedBitmapHolder();
                 //DenseVector old = value.f0;
                 final VectorBlock vector = value.f0;
+
 /*                for (int i = pV.nextSetBit(0); i != -1; i = pV.nextSetBit(i + 1)) {
                     sum += old.get(i);
                 }*/
@@ -236,13 +322,13 @@ public class FlinkMatrixReader implements Serializable {
 
                 // slice the window
 
-                EWAHCompressedBitmap slice = EWAHCompressedBitmapUtil.buildWindow(vector.getStartRow(), vector.size(), n);
+              /*  EWAHCompressedBitmap slice = EWAHCompressedBitmapUtil.buildWindow(vector.getStartRow(), vector.size(), n);
 
-                EWAHCompressedBitmap view = slice.and(complete.getIntegers());
+                EWAHCompressedBitmap view = slice.and(complete.getIntegers());*/
 
-                IntIterator intIterator = view.intIterator();
+                IntIterator intIterator = view.getIntegers().intIterator();
                 while (intIterator.hasNext()) {
-                    sum += vector.get(intIterator.next() - vector.getStartRow());
+                    sum += vector.get(intIterator.next());
                 }
 
 /*                for (int i = vector.getStartRow(); i < vector.getStartRow() + vector.size(); i++) {
@@ -276,7 +362,7 @@ public class FlinkMatrixReader implements Serializable {
 
         //MapOperator<Tuple2<DenseVector, Double>, DenseVector> nextVector = matrixBlocks.crossWithTiny(iterate).map(new MatrixBlockVectorKernelCross(alpha)).name("MatrixBlockVectorKernel")
 
-        final MapOperator<Tuple2<VectorBlock, Double>, VectorBlock> nextVector = matrixBlocks.joinWithTiny(iterate).where("startCol").equalTo("startRow")
+        final MapOperator<VectorBlock, VectorBlock> nextVector = matrixBlocks.joinWithTiny(iterate).where("startCol").equalTo("startRow")
                 .map(new NonTimingMatrixBlockVectorKernel())
                 .returns(VectorBlock.class)
                 .groupBy("startRow").reduce(new ReduceFunction<VectorBlock>() {
@@ -301,23 +387,29 @@ public class FlinkMatrixReader implements Serializable {
                         return (VectorBlock) value1.add(value2);
                         //return new VectorBlock(value1.getStartRow(), (VectorBlock) value1.add(value2));
                     }
-                }).returns(VectorBlock.class).cross(personalization).map(new MapFunction<Tuple2<VectorBlock, Double>, VectorBlock>() {
-                    @Override
-                    public VectorBlock map(Tuple2<VectorBlock, Double> value) throws Exception {
-                        double[] data = value.f0.getData();
+                }).returns(VectorBlock.class).map(new RichMapFunction<VectorBlock, VectorBlock>() {
 
-                        // if this is the last block which is "extended" don't change any value below the cutoff
+                    public double personalAdd;
+
+                    @Override
+                    public void open(Configuration parameters) throws Exception {
+                        personalAdd = Iterables.getOnlyElement(getRuntimeContext().<Double>getBroadcastVariable("pV"));
+                    }
+
+                    @Override
+                    public VectorBlock map(VectorBlock value) throws Exception {
+                        double[] data = value.getData();
                         int limit = data.length;
-                        if (value.f0.getStartRow() + value.f0.size() > n) {
+                        // if this is the last block which is "extended" don't change any value below the cutoff
+                        if (value.getStartRow() + value.size() > n) {
                             limit = (int) (n % Math.ceil(n / (double) blocks));
                         }
                         for (int i = 0; i < limit; i++) {
-                            data[i] = alpha * data[i] + value.f1;
+                            data[i] = alpha * data[i] + personalAdd;
                         }
-
-                        return value.f0;//new VectorBlock(value.f0.startRow, value.f0);
+                        return value;
                     }
-                }).returns(VectorBlock.class).name("Calculate next vector");
+                }).withBroadcastSet(personalization, "pV").returns(VectorBlock.class).name("Calculate next vector");
 
         // filter out convergent vector blocks
         JoinOperator.EquiJoin<VectorBlock, VectorBlock, Double> deltas = iterate.join(nextVector).where("startRow").equalTo("startRow").with(new FlatJoinFunction<VectorBlock, VectorBlock, Double>() {
@@ -392,6 +484,46 @@ public class FlinkMatrixReader implements Serializable {
             this.vectorBlocks = vectorBlocks;
             this.stopwatch = stopwatch;
         }
+    }
+
+    private static DanglingNodeInformation createNewDanglingInformation(int adjustedN, int n, int blocks, int f0) {
+
+        int startRow = f0 / (adjustedN / blocks) * (adjustedN / blocks);
+
+        EWAHCompressedBitmap s = new EWAHCompressedBitmap();
+
+        // the last entry is smaller
+        int limit = adjustedN / blocks;
+        if (startRow + (adjustedN / blocks) > n) {
+            limit = (int) (n % Math.ceil(n / (double) blocks));
+        }
+        s.setSizeInBits(limit, false);
+
+        EWAHCompressedBitmapHolder ewahCompressedBitmap = new EWAHCompressedBitmapHolder(s);
+
+        DanglingNodeInformation danglingNodeInformation = new DanglingNodeInformation();
+        danglingNodeInformation.setEwahCompressedBitmapHolder(ewahCompressedBitmap);
+        danglingNodeInformation.setStartRow(startRow);
+
+        return danglingNodeInformation;
+    }
+
+    private static void emitIfNeeded(DanglingNodeInformation danglingNodeInformation, Collector<DanglingNodeInformation> out) {
+
+        danglingNodeInformation.getEwahCompressedBitmapHolder().not();
+        if (danglingNodeInformation.getEwahCompressedBitmapHolder().getIntegers().cardinality() > 0) {
+            danglingNodeInformation.getEwahCompressedBitmapHolder().trim();
+
+
+            //System.out.println("HELLO " + danglingNodeInformation.startRow + " -DANGLING-> " + danglingNodeInformation.getEwahCompressedBitmapHolder().getIntegers().toString());
+            //bitSet.flip(0, n);
+
+            //out.collect(personalizationVector);
+            //out.collect(bitSet);
+
+            out.collect(danglingNodeInformation);
+        }
+
     }
 
 }

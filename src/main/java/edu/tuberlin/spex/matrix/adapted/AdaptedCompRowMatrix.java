@@ -51,12 +51,12 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
     /**
      * Column indices. These are kept sorted within each row.
      */
-    int[] columnIndex;
+    IntBuffer columnIndex;
 
     /**
      * Indices to the start of each row
      */
-    int[] rowPointer;
+    IntBuffer rowPointer;
 
     public AdaptedCompRowMatrix() {
         super(0,0);
@@ -153,8 +153,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
     public AdaptedCompRowMatrix(int numRows, int numColumns, double[] data, int[] columnIndex, int[] rowPointer) {
         super(numRows, numColumns);
         this.data = DoubleBuffer.wrap(data);
-        this.columnIndex = columnIndex;
-        this.rowPointer = rowPointer;
+        this.columnIndex = IntBuffer.wrap(columnIndex);
+        this.rowPointer = IntBuffer.wrap(rowPointer);
     }
 
     /**
@@ -192,8 +192,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         for (int i = 0; i < nz.length; ++i)
             nnz += nz[i].length;
 
-        rowPointer = new int[numRows + 1];
-        columnIndex = new int[nnz];
+        int rowPointer[] = new int[numRows + 1];
+        int columnIndex[] = new int[nnz];
         //data = new double[nnz];
 
         if (nz.length != numRows)
@@ -212,6 +212,9 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
             Arrays.sort(columnIndex, rowPointer[i - 1], rowPointer[i]);
         }
+
+        this.rowPointer = IntBuffer.wrap(rowPointer);
+        this.columnIndex = IntBuffer.wrap(columnIndex);
     }
 
     private void construct(int[][] nz, double[] data) {
@@ -219,8 +222,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         for (int i = 0; i < nz.length; ++i)
             nnz += nz[i].length;
 
-        rowPointer = new int[numRows + 1];
-        columnIndex = new int[nnz];
+        int rowPointer[] = new int[numRows + 1];
+        int columnIndex[] = new int[nnz];
         this.data = DoubleBuffer.wrap(data);
 
         if (nz.length != numRows)
@@ -239,6 +242,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
             Arrays.sort(columnIndex, rowPointer[i - 1], rowPointer[i]);
         }
+        this.rowPointer = IntBuffer.wrap(rowPointer);
+        this.columnIndex = IntBuffer.wrap(columnIndex);
     }
 
     private void construct(Matrix A, boolean deep) {
@@ -246,17 +251,20 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             if (A instanceof AdaptedCompRowMatrix) {
                 AdaptedCompRowMatrix Ac = (AdaptedCompRowMatrix) A;
                 data = Ac.data.duplicate();//new double[Ac.data.capacity()];
-                columnIndex = new int[Ac.columnIndex.length];
-                rowPointer = new int[Ac.rowPointer.length];
+                int[] columnIndex = new int[Ac.columnIndex.limit()];
+                int[] rowPointer = new int[Ac.rowPointer.limit()];
 
                 System.arraycopy(Ac.data, 0, data, 0, data.capacity());
                 System.arraycopy(Ac.columnIndex, 0, columnIndex, 0,
                         columnIndex.length);
                 System.arraycopy(Ac.rowPointer, 0, rowPointer, 0,
                         rowPointer.length);
+
+                this.columnIndex = IntBuffer.wrap(columnIndex);
+                this.rowPointer = IntBuffer.wrap(rowPointer);
             } else {
 
-                List<Set<Integer>> rnz = new ArrayList<Set<Integer>>(numRows);
+                List<Set<Integer>> rnz = new ArrayList<>(numRows);
                 for (int i = 0; i < numRows; ++i)
                     rnz.add(new HashSet<Integer>());
 
@@ -310,14 +318,14 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
     /**
      * Returns the column indices
      */
-    public int[] getColumnIndices() {
+    public IntBuffer getColumnIndices() {
         return columnIndex;
     }
 
     /**
      * Returns the row pointers
      */
-    public int[] getRowPointers() {
+    public IntBuffer getRowPointers() {
         return rowPointer;
     }
 
@@ -338,8 +346,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         for (int i = 0; i < numRows; ++i) {
             for (int j = 0; j < C.numColumns(); ++j) {
                 double dot = 0;
-                for (int k = rowPointer[i]; k < rowPointer[i + 1]; ++k) {
-                    dot += data.get(k) * B.get(columnIndex[k], j);
+                for (int k = rowPointer.array()[i]; k < rowPointer.array()[i + 1]; ++k) {
+                    dot += data.get(k) * B.get(columnIndex.array()[k], j);
                 }
                 if (dot != 0) {
                     C.set(i, j, dot);
@@ -361,8 +369,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             double[] xd = ((DenseVector) x).getData();
             for (int i = 0; i < numRows; ++i) {
                 double dot = 0;
-                for (int j = rowPointer[i]; j < rowPointer[i + 1]; j++) {
-                    dot += data.get(j) * xd[columnIndex[j]];
+                for (int j = rowPointer.array()[i]; j < rowPointer.array()[i + 1]; j++) {
+                    dot += data.get(j) * xd[columnIndex.array()[j]];
                 }
                 if (dot != 0) {
                     y.set(i, dot);
@@ -376,8 +384,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         // @see http://www.netlib.org/blas/blast-forum/chapter3.pdf
         for (int i = 0; i < numRows; ++i) {
             double dot = 0;
-            for (int j = rowPointer[i]; j < rowPointer[i + 1]; j++) {
-                dot += data.get(j) * x.get(columnIndex[j]);
+            for (int j = rowPointer.get(i); j < rowPointer.get(i + 1); j++) {
+                dot += data.get(j) * x.get(columnIndex.get(j));
             }
             y.set(i, dot);
         }
@@ -396,8 +404,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
         for (int i = 0; i < numRows; ++i) {
             double dot = 0;
-            for (int j = rowPointer[i]; j < rowPointer[i + 1]; ++j)
-                dot += data.get(j) * xd[columnIndex[j]];
+            for (int j = rowPointer.array()[i]; j < rowPointer.array()[i + 1]; ++j)
+                dot += data.get(j) * xd[columnIndex.array()[j]];
             yd[i] += alpha * dot;
         }
 
@@ -417,8 +425,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         y.zero();
 
         for (int i = 0; i < numRows; ++i)
-            for (int j = rowPointer[i]; j < rowPointer[i + 1]; ++j)
-                yd[columnIndex[j]] += data.get(j) * xd[i];
+            for (int j = rowPointer.array()[i]; j < rowPointer.array()[i + 1]; ++j)
+                yd[columnIndex.array()[j]] += data.get(j) * xd[i];
 
         return y;
     }
@@ -438,8 +446,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
         // y = A'x + y
         for (int i = 0; i < numRows; ++i)
-            for (int j = rowPointer[i]; j < rowPointer[i + 1]; ++j)
-                yd[columnIndex[j]] += data.get(j) * xd[i];
+            for (int j = rowPointer.array()[i]; j < rowPointer.array()[i + 1]; ++j)
+                yd[columnIndex.array()[j]] += data.get(j) * xd[i];
 
         // y = alpha*y = alpha*A'x + y
         return y.scale(alpha);
@@ -468,8 +476,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
     public double get(int row, int column) {
         check(row, column);
 
-        int index = Arrays.binarySearch(columnIndex,
-                rowPointer[row], rowPointer[row + 1], column);
+        int index = Arrays.binarySearch(columnIndex.array(),
+                rowPointer.array()[row], rowPointer.array()[row + 1], column);
 
         if (index >= 0)
             return data.get(index);
@@ -481,9 +489,9 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
      * Finds the insertion index
      */
     private int getIndex(int row, int column) {
-        int i = Arrays.binarySearch(columnIndex, rowPointer[row], rowPointer[row + 1], column);
+        int i = Arrays.binarySearch(columnIndex.array(), rowPointer.array()[row], rowPointer.array()[row + 1], column);
 
-        if (i != -1 && columnIndex[i] == column)
+        if (i != -1 && columnIndex.array()[i] == column)
             return i;
         else
             throw new IndexOutOfBoundsException("Entry (" + (row + 1) + ", "
@@ -555,9 +563,9 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
          * new row has been found, the cursor is also updated
          */
         private void nextNonEmptyRow() {
-            while (row < numRows() && rowPointer[row] == rowPointer[row + 1])
+            while (row < numRows() && rowPointer.array()[row] == rowPointer.array()[row + 1])
                 row++;
-            cursor = rowPointer[row];
+            cursor = rowPointer.array()[row];
         }
 
         public boolean hasNext() {
@@ -568,7 +576,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             entry.update(row, cursor);
 
             // Next position is in the same row
-            if (cursor < rowPointer[row + 1] - 1)
+            if (cursor < rowPointer.array()[row + 1] - 1)
                 cursor++;
 
             // Next position is at the following (non-empty) row
@@ -586,7 +594,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
     }
 
-    public int[] getRowPointer() {
+    public IntBuffer getRowPointer() {
         return rowPointer;
     }
 
@@ -612,7 +620,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         }
 
         public int column() {
-            return columnIndex[cursor];
+            return columnIndex.array()[cursor];
         }
 
         public double get() {
@@ -667,16 +675,16 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         out.writeInt(numColumns);
 
         // write array sizes
-        out.writeInt(columnIndex.length);
-        out.writeInt(rowPointer.length);
+        out.writeInt(columnIndex.limit());
+        out.writeInt(rowPointer.limit());
         out.writeInt(data.capacity());
 
-        for (int i : columnIndex) {
-            out.writeInt(i);
+        for (int i = 0; i < columnIndex.limit(); i++) {
+            out.writeInt(columnIndex.get(i));
         }
 
-        for (int i : rowPointer) {
-            out.writeInt(i);
+        for (int i = 0; i < rowPointer.limit(); i++) {
+            out.writeInt(rowPointer.get(i));
         }
 
         for (int i = 0; i < data.capacity(); i++) {
@@ -698,24 +706,25 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         int dataSize = in.readInt();
 
 
-        columnIndex = new int[colSize];
-        rowPointer = new int[rowSize];
+        //columnIndex = new int[colSize];
+        //rowPointer = new int[rowSize];
         //data = new double[dataSize];
 
 
         ByteBuffer byteBuffer = ByteBuffer.allocate(colSize * 4 + rowSize * 4 + dataSize * 8);
-        in.readFully(byteBuffer.array());
+        in.read(byteBuffer.array());
 
-        IntBuffer colBuf = IntBuffer.wrap(columnIndex);
-        IntBuffer rowBuf = IntBuffer.wrap(rowPointer);
+        //IntBuffer colBuf = IntBuffer.wrap(columnIndex);
+        //IntBuffer rowBuf = IntBuffer.wrap(rowPointer);
 
-        IntBuffer src = (IntBuffer) byteBuffer.asIntBuffer().limit(colSize);
-        colBuf.put(src);
+        columnIndex = (IntBuffer) byteBuffer.asIntBuffer().limit(colSize);
+        //colBuf.put(src);
+
         // advance the buffer
         byteBuffer.position(colSize * 4);
 
-        src = (IntBuffer) byteBuffer.asIntBuffer().limit(rowSize);
-        rowBuf.put(src);
+        rowPointer = (IntBuffer) byteBuffer.asIntBuffer().limit(rowSize);
+        //rowBuf.put(src2);
 
         byteBuffer.position(colSize * 4 + rowSize * 4);
 

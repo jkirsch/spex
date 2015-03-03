@@ -43,7 +43,7 @@ public class MatrixBlockPartitioner implements KeySelector<Tuple3<Integer, Integ
         long column = value.f1 / blockSize;
 
         long rowIndex;
-        long colIndex;
+
         if(value.f0 >= blockSize * blocks) {
             rowIndex = blocks;
         } else {
@@ -73,7 +73,7 @@ public class MatrixBlockPartitioner implements KeySelector<Tuple3<Integer, Integ
     }
 
     /**
-     * Compute back the block dimensions from the offsets
+     * Compute back the block dimensions from the offsets.
      * @param inputRow
      * @param inputCol
      */

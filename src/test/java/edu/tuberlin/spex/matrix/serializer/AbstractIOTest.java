@@ -4,7 +4,6 @@ import com.esotericsoftware.kryo.Kryo;
 import com.esotericsoftware.kryo.io.Input;
 import com.esotericsoftware.kryo.io.Output;
 import edu.tuberlin.spex.matrix.adapted.AdaptedCompColMatrix;
-import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
 import no.uib.cipr.matrix.DenseMatrix;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.sparse.LinkedSparseMatrix;
@@ -31,7 +30,6 @@ public abstract class AbstractIOTest {
 
         kryo.addDefaultSerializer(DenseMatrix.class, new DenseMatrixSerializer());
         kryo.addDefaultSerializer(LinkedSparseMatrix.class, new LinkedSparseMatrixSerializer());
-        kryo.addDefaultSerializer(AdaptedCompRowMatrix.class, new AdaptedCompRowMatrixSerializer());
         kryo.addDefaultSerializer(AdaptedCompColMatrix.class, new AdaptedCompColMatrixSerializer());
         kryo.addDefaultSerializer(DenseVector.class, new DenseVectorSerializer());
 

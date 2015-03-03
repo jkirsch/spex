@@ -3,6 +3,7 @@ package edu.tuberlin.spex.algorithms.domain;
 import com.google.common.base.Preconditions;
 import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
 import no.uib.cipr.matrix.DenseMatrix;
+import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.Matrix;
 import no.uib.cipr.matrix.Vector;
 
@@ -50,9 +51,9 @@ public class MatrixBlock implements Serializable {
 
     }
 
-    public Vector mult(Vector x) {
+    public Vector mult(VectorBlock x) {
 
-        return matrix.mult(x, x.copy());
+        return matrix.mult(x, new VectorBlock(x.getStartRow(),new DenseVector(x.size())));
 
     }
 

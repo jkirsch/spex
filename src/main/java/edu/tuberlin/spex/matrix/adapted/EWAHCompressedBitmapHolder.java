@@ -6,7 +6,6 @@ import org.apache.flink.core.memory.DataOutputView;
 import org.apache.flink.types.Value;
 
 import java.io.IOException;
-import java.util.Iterator;
 
 /**
  * Date: 02.03.2015
@@ -15,7 +14,20 @@ import java.util.Iterator;
  */
 public class EWAHCompressedBitmapHolder implements Value {
 
-    EWAHCompressedBitmap integers = new EWAHCompressedBitmap();
+    public EWAHCompressedBitmap integers;
+
+    public EWAHCompressedBitmapHolder() {
+        integers = new EWAHCompressedBitmap();
+    }
+
+    public EWAHCompressedBitmapHolder(EWAHCompressedBitmap integers) {
+        this.integers = integers;
+    }
+
+    public void setIntegers(EWAHCompressedBitmap integers) {
+        this.integers = integers;
+    }
+
 
     @Override
     public void write(DataOutputView dataOutputView) throws IOException {
@@ -41,10 +53,6 @@ public class EWAHCompressedBitmapHolder implements Value {
 
     public boolean set(int i) {
         return integers.set(i);
-    }
-
-    public Iterator<Integer> iterator() {
-        return integers.iterator();
     }
 
     public EWAHCompressedBitmap getIntegers() {

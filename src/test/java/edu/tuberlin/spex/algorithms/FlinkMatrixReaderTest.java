@@ -119,7 +119,7 @@ public class FlinkMatrixReaderTest {
                 }
             }
 
-            Assert.assertThat(p_k1.norm(Vector.Norm.One), closeTo(1, 0.00001));
+            Assert.assertThat(" Setting : b = " + b, p_k1.norm(Vector.Norm.One), closeTo(1, 0.00001));
             Assert.assertThat(p_k1.get(0), closeTo(0.0675, 0.0001));
             Assert.assertThat(p_k1.get(1), closeTo(0.0701, 0.0001));
             Assert.assertThat(p_k1.get(2), closeTo(0.0934, 0.0001));
