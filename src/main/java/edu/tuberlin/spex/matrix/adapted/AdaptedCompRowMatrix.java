@@ -251,17 +251,9 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             if (A instanceof AdaptedCompRowMatrix) {
                 AdaptedCompRowMatrix Ac = (AdaptedCompRowMatrix) A;
                 data = Ac.data.duplicate();//new double[Ac.data.capacity()];
-                int[] columnIndex = new int[Ac.columnIndex.limit()];
-                int[] rowPointer = new int[Ac.rowPointer.limit()];
 
-                System.arraycopy(Ac.data, 0, data, 0, data.capacity());
-                System.arraycopy(Ac.columnIndex, 0, columnIndex, 0,
-                        columnIndex.length);
-                System.arraycopy(Ac.rowPointer, 0, rowPointer, 0,
-                        rowPointer.length);
-
-                this.columnIndex = IntBuffer.wrap(columnIndex);
-                this.rowPointer = IntBuffer.wrap(rowPointer);
+                this.columnIndex = Ac.columnIndex.duplicate();
+                this.rowPointer = Ac.rowPointer.duplicate();;
             } else {
 
                 List<Set<Integer>> rnz = new ArrayList<>(numRows);

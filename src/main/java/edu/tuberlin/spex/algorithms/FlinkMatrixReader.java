@@ -32,6 +32,7 @@ import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple4;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.util.Collector;
 import org.apache.flink.util.NumberSequenceIterator;
@@ -53,6 +54,17 @@ public class FlinkMatrixReader implements Serializable {
     public static void main(String[] args) throws Exception {
 
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+
+        // load the configuration
+        try {
+            LOG.info("Loading configuration from conf/");
+            GlobalConfiguration.loadConfiguration("conf");
+            GlobalConfiguration.getConfiguration();
+        }
+        catch (Exception e) {
+            throw new Exception("Could not load configuration", e);
+        }
+
 //        EnvironmentInformation.logEnvironmentInfo(LOG, "FlinkMatrixReader");
 
         SerializerRegistry.register(env);
