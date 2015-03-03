@@ -53,8 +53,6 @@ public class FlinkMatrixReader implements Serializable {
 
     public static void main(String[] args) throws Exception {
 
-        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-
         // load the configuration
         try {
             LOG.info("Loading configuration from conf/");
@@ -64,6 +62,8 @@ public class FlinkMatrixReader implements Serializable {
         catch (Exception e) {
             throw new Exception("Could not load configuration", e);
         }
+
+        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
 
 //        EnvironmentInformation.logEnvironmentInfo(LOG, "FlinkMatrixReader");
 
