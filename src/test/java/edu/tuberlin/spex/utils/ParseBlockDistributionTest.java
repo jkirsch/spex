@@ -74,7 +74,7 @@ public class ParseBlockDistributionTest {
 
             }
 
-            System.out.println(matrix);
+            //System.out.println(matrix);
 
             double[] values = new double[doubles.size()];
 
