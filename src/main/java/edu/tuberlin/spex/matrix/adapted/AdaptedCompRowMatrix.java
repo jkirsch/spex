@@ -43,6 +43,8 @@ import java.util.*;
  */
 public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
+    ByteBuffer byteBuffer;
+
     /**
      * Matrix data
      */
@@ -669,18 +671,22 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         out.writeInt(rowPointer.limit());
         out.writeInt(data.capacity());
 
-        for (int i = 0; i < columnIndex.limit(); i++) {
-            out.writeInt(columnIndex.get(i));
-        }
+        if(byteBuffer != null) {
+            out.write(byteBuffer.array());
+        } else {
 
-        for (int i = 0; i < rowPointer.limit(); i++) {
-            out.writeInt(rowPointer.get(i));
-        }
+            for (int i = 0; i < columnIndex.limit(); i++) {
+                out.writeInt(columnIndex.get(i));
+            }
 
-        for (int i = 0; i < data.capacity(); i++) {
-            out.writeDouble(data.get(i));
-        }
+            for (int i = 0; i < rowPointer.limit(); i++) {
+                out.writeInt(rowPointer.get(i));
+            }
 
+            for (int i = 0; i < data.capacity(); i++) {
+                out.writeDouble(data.get(i));
+            }
+        }
 
     }
 
@@ -701,7 +707,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         //data = new double[dataSize];
 
 
-        ByteBuffer byteBuffer = ByteBuffer.allocate(colSize * 4 + rowSize * 4 + dataSize * 8);
+        byteBuffer = ByteBuffer.allocate(colSize * 4 + rowSize * 4 + dataSize * 8);
         in.read(byteBuffer.array());
 
         //IntBuffer colBuf = IntBuffer.wrap(columnIndex);
