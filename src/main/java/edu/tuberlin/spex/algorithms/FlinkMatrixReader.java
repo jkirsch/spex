@@ -85,13 +85,13 @@ public class FlinkMatrixReader implements Serializable {
                 String index = indices[i];
                 blockSizes[i] = Ints.tryParse(index);
             }
-            env.setDegreeOfParallelism(degree);
+            env.setParallelism(degree);
         }
 
         // read the size information
         int n = MatrixReaderInputFormat.getSize(path);
 
-        LOG.info("Analysing {} with {} nodes using parallelism {} for the blocksizes {} ", path, n, env.getDegreeOfParallelism(), blockSizes);
+        LOG.info("Analysing {} with {} nodes using parallelism {} for the blocksizes {} ", path, n, env.getParallelism(), blockSizes);
 
         Map<Integer, Stopwatch> timings = new TreeMap<>();
         Map<Integer, List<Tuple2<Long, Integer>>> counts = new HashMap<>();
@@ -111,6 +111,66 @@ public class FlinkMatrixReader implements Serializable {
 
         for (Map.Entry<Integer, List<Tuple2<Long, Integer>>> integerListEntry : counts.entrySet()) {
             LOG.info("{} {}", integerListEntry.getKey(), integerListEntry.getValue().toString());
+        }
+
+    }
+
+    private static DanglingNodeInformation createNewDanglingInformation(int adjustedN, int n, int blocks, int f0) {
+
+        int startRow = f0 / (adjustedN / blocks) * (adjustedN / blocks);
+
+        EWAHCompressedBitmap s = new EWAHCompressedBitmap();
+
+        // the last entry is smaller
+        int limit = adjustedN / blocks;
+        if (startRow + (adjustedN / blocks) > n) {
+            limit = (int) (n % Math.ceil(n / (double) blocks));
+        }
+        s.setSizeInBits(limit, false);
+
+        EWAHCompressedBitmapHolder ewahCompressedBitmap = new EWAHCompressedBitmapHolder(s);
+
+        DanglingNodeInformation danglingNodeInformation = new DanglingNodeInformation();
+        danglingNodeInformation.setEwahCompressedBitmapHolder(ewahCompressedBitmap);
+        danglingNodeInformation.setStartRow(startRow);
+
+        return danglingNodeInformation;
+    }
+
+    private static DanglingNodeInformationBitSet createNewDanglingInformationBitSet(int adjustedN, int n, int blocks, int f0, BitSet bitSet) {
+
+        int startRow = f0 / (adjustedN / blocks) * (adjustedN / blocks);
+
+        // the last entry is smaller
+        int limit = adjustedN / blocks;
+        if (startRow + (adjustedN / blocks) > n) {
+            limit = (int) (n % Math.ceil(n / (double) blocks));
+        }
+
+        DanglingNodeInformationBitSet danglingNodeInformationBitSet = new DanglingNodeInformationBitSet();
+
+        BitSet slice = bitSet.get(startRow, startRow + limit);
+
+        danglingNodeInformationBitSet.setStartRow(startRow);
+        danglingNodeInformationBitSet.setBitSet(slice);
+
+        return danglingNodeInformationBitSet;
+    }
+
+    private static void emitIfNeeded(DanglingNodeInformation danglingNodeInformation, Collector<DanglingNodeInformation> out) {
+
+        danglingNodeInformation.getEwahCompressedBitmapHolder().not();
+        if (danglingNodeInformation.getEwahCompressedBitmapHolder().getIntegers().cardinality() > 0) {
+            danglingNodeInformation.getEwahCompressedBitmapHolder().trim();
+
+
+            //System.out.println("HELLO " + danglingNodeInformation.startRow + " -DANGLING-> " + danglingNodeInformation.getEwahCompressedBitmapHolder().getIntegers().toString());
+            //bitSet.flip(0, n);
+
+            //out.collect(personalizationVector);
+            //out.collect(bitSet);
+
+            out.collect(danglingNodeInformation);
         }
 
     }
@@ -489,66 +549,6 @@ public class FlinkMatrixReader implements Serializable {
             this.vectorBlocks = vectorBlocks;
             this.stopwatch = stopwatch;
         }
-    }
-
-    private static DanglingNodeInformation createNewDanglingInformation(int adjustedN, int n, int blocks, int f0) {
-
-        int startRow = f0 / (adjustedN / blocks) * (adjustedN / blocks);
-
-        EWAHCompressedBitmap s = new EWAHCompressedBitmap();
-
-        // the last entry is smaller
-        int limit = adjustedN / blocks;
-        if (startRow + (adjustedN / blocks) > n) {
-            limit = (int) (n % Math.ceil(n / (double) blocks));
-        }
-        s.setSizeInBits(limit, false);
-
-        EWAHCompressedBitmapHolder ewahCompressedBitmap = new EWAHCompressedBitmapHolder(s);
-
-        DanglingNodeInformation danglingNodeInformation = new DanglingNodeInformation();
-        danglingNodeInformation.setEwahCompressedBitmapHolder(ewahCompressedBitmap);
-        danglingNodeInformation.setStartRow(startRow);
-
-        return danglingNodeInformation;
-    }
-
-    private static DanglingNodeInformationBitSet createNewDanglingInformationBitSet(int adjustedN, int n, int blocks, int f0, BitSet bitSet) {
-
-        int startRow = f0 / (adjustedN / blocks) * (adjustedN / blocks);
-
-        // the last entry is smaller
-        int limit = adjustedN / blocks;
-        if (startRow + (adjustedN / blocks) > n) {
-            limit = (int) (n % Math.ceil(n / (double) blocks));
-        }
-
-        DanglingNodeInformationBitSet danglingNodeInformationBitSet = new DanglingNodeInformationBitSet();
-
-        BitSet slice = bitSet.get(startRow, startRow + limit);
-
-        danglingNodeInformationBitSet.setStartRow(startRow);
-        danglingNodeInformationBitSet.setBitSet(slice);
-
-        return danglingNodeInformationBitSet;
-    }
-
-    private static void emitIfNeeded(DanglingNodeInformation danglingNodeInformation, Collector<DanglingNodeInformation> out) {
-
-        danglingNodeInformation.getEwahCompressedBitmapHolder().not();
-        if (danglingNodeInformation.getEwahCompressedBitmapHolder().getIntegers().cardinality() > 0) {
-            danglingNodeInformation.getEwahCompressedBitmapHolder().trim();
-
-
-            //System.out.println("HELLO " + danglingNodeInformation.startRow + " -DANGLING-> " + danglingNodeInformation.getEwahCompressedBitmapHolder().getIntegers().toString());
-            //bitSet.flip(0, n);
-
-            //out.collect(personalizationVector);
-            //out.collect(bitSet);
-
-            out.collect(danglingNodeInformation);
-        }
-
     }
 
 }
