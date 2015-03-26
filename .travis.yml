@@ -8,9 +8,5 @@ cache:
 
 language: java
 
-install: true
-
-script: mvn clean test jacoco:report
-
 after_success:
-  - mvn coveralls:report
+  - mvn clean cobertura:cobertura coveralls:report
