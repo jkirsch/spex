@@ -8,22 +8,19 @@ public class DenseSpecialMatrix extends BaseMatrix {
 
     private double[][] data;
 
-    public static DenseSpecialMatrix loadData(double[][] matrix) {
-        DenseSpecialMatrix denseSpecialMatrix = new DenseSpecialMatrix();
+    public DenseSpecialMatrix(double[][] matrix) {
+        super(matrix);
 
-        denseSpecialMatrix.load(matrix);
-
-        return denseSpecialMatrix;
     }
 
-    private void load(double[][] matrix) {
-        numRows = matrix.length;
-        numColumns = matrix[0].length;
+    @Override
+    protected BaseMatrix loadDataInternal(double[][] matrix) {
         this.data = matrix;
+        return this;
     }
 
 
-        @Override
+    @Override
     public int getStorageSize() {
         return numColumns * numRows;
     }

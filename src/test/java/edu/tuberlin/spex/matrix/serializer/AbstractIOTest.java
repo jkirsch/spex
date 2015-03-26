@@ -8,12 +8,11 @@ import no.uib.cipr.matrix.DenseMatrix;
 import no.uib.cipr.matrix.DenseVector;
 import no.uib.cipr.matrix.sparse.LinkedSparseMatrix;
 import org.apache.commons.io.IOUtils;
+import org.apache.flink.core.memory.DataInputView;
+import org.apache.flink.core.memory.DataOutputView;
 import org.junit.Before;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
+import java.io.*;
 
 /**
  * Date: 10.02.2015
@@ -61,6 +60,47 @@ public abstract class AbstractIOTest {
             return kryo.readObject(input, type);
         } finally {
             IOUtils.closeQuietly(inputStream);
+        }
+    }
+
+    static final class TestOutputView extends DataOutputStream implements DataOutputView {
+
+        public TestOutputView() {
+            super(new ByteArrayOutputStream(4096));
+        }
+
+        public TestInputView getInputView() {
+            ByteArrayOutputStream baos = (ByteArrayOutputStream) out;
+            return new TestInputView(baos.toByteArray());
+        }
+
+        @Override
+        public void skipBytesToWrite(int numBytes) throws IOException {
+            for (int i = 0; i < numBytes; i++) {
+                write(0);
+            }
+        }
+
+        @Override
+        public void write(DataInputView source, int numBytes) throws IOException {
+            byte[] buffer = new byte[numBytes];
+            source.readFully(buffer);
+            write(buffer);
+        }
+    }
+
+    private static final class TestInputView extends DataInputStream implements DataInputView {
+
+        public TestInputView(byte[] data) {
+            super(new ByteArrayInputStream(data));
+        }
+
+        @Override
+        public void skipBytesToRead(int numBytes) throws IOException {
+            while (numBytes > 0) {
+                int skipped = skipBytes(numBytes);
+                numBytes -= skipped;
+            }
         }
     }
 }

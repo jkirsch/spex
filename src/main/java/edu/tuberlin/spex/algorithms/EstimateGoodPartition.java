@@ -24,7 +24,7 @@ public class EstimateGoodPartition {
     public static void main(String[] args) throws Exception {
 
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-        env.setDegreeOfParallelism(1);
+        env.setParallelism(1);
 
         String path = "datasets/smallTest.csv";
 

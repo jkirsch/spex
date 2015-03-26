@@ -7,3 +7,10 @@ cache:
   - datasets
 
 language: java
+
+install: true
+
+script: mvn clean test jacoco:report
+
+after_success:
+  - mvn coveralls:report

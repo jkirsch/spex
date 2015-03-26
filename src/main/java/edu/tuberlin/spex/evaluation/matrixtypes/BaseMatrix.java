@@ -11,6 +11,16 @@ public abstract class BaseMatrix {
     int numRows;
     int numColumns;
 
+    public BaseMatrix(double[][] matrix) {
+
+        // here we need to load the data
+
+        // assume rectangular
+        numRows = matrix.length;
+        numColumns = matrix[0].length;
+        loadDataInternal(matrix);
+    }
+
     public static int getNNZ(double[][] matrix) {
         int numEntries = 0;
         for (double[] aMatrix : matrix) {
@@ -24,6 +34,9 @@ public abstract class BaseMatrix {
 
         return numEntries;
     }
+
+    protected abstract BaseMatrix loadDataInternal(double[][] matrix);
+
 
     public final String getName() {
         return this.getClass().getSimpleName();
@@ -90,4 +103,5 @@ public abstract class BaseMatrix {
             return operationsCounter;
         }
     }
+
 }

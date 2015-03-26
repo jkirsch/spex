@@ -189,6 +189,64 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         construct(nz, data);
     }
 
+    /**
+     * Constructor for CompRowMatrix
+     *
+     * @param A
+     *            Copies from this matrix
+     * @param deep
+     *            True if the copy is to be deep. If it is a shallow copy,
+     *            <code>A</code> must be a <code>CompRowMatrix</code>
+     */
+    public AdaptedCompRowMatrix(Matrix A, boolean deep) {
+        super(A);
+        construct(A, deep);
+    }
+
+    /**
+     * Constructor for CompRowMatrix
+     *
+     * @param A
+     *            Copies from this matrix. The copy will be deep
+     */
+    public AdaptedCompRowMatrix(Matrix A) {
+        this(A, true);
+    }
+
+    public static AdaptedCompRowMatrix buildFromSortedIterator(Iterator<Tuple3<Integer, Integer, Double>> values, int rows, int cols) {
+        List<Double> data = new ArrayList<>();
+
+        int lastRow = -1;
+
+        // The nonzero column indices on each row
+        int[][] nnz = new int[rows][0];
+        ArrayList<Object> colIndices = new ArrayList<>();
+
+        while (values.hasNext()) {
+            Tuple3<Integer, Integer, Double> value = values.next();
+            data.add(value.f2);
+
+            if(value.f0 > lastRow && lastRow > -1) {
+                Preconditions.checkArgument(lastRow < value.f0, "We need a sorted list");
+                // flush last row
+               nnz[lastRow] = ArrayUtils.toPrimitive(colIndices.toArray(new Integer[colIndices.size()]));
+               colIndices.clear();
+            }
+
+            colIndices.add(value.f1);
+            lastRow = value.f0;
+        }
+
+        nnz[lastRow] = ArrayUtils.toPrimitive(colIndices.toArray(new Integer[colIndices.size()]));
+
+        AdaptedCompRowMatrix constructed = new AdaptedCompRowMatrix(rows, cols, nnz, ArrayUtils.toPrimitive(data.toArray(new Double[data.size()])));
+
+        //constructed.data = ArrayUtils.toPrimitive(data.toArray(new Double[data.size()]));
+
+        return constructed;
+
+    }
+
     private void construct(int[][] nz) {
         int nnz = 0;
         for (int i = 0; i < nz.length; ++i)
@@ -283,30 +341,6 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             rowPointer = Ac.getRowPointers();
             data = Ac.data;//getData();
         }
-    }
-
-    /**
-     * Constructor for CompRowMatrix
-     * 
-     * @param A
-     *            Copies from this matrix
-     * @param deep
-     *            True if the copy is to be deep. If it is a shallow copy,
-     *            <code>A</code> must be a <code>CompRowMatrix</code>
-     */
-    public AdaptedCompRowMatrix(Matrix A, boolean deep) {
-        super(A);
-        construct(A, deep);
-    }
-
-    /**
-     * Constructor for CompRowMatrix
-     * 
-     * @param A
-     *            Copies from this matrix. The copy will be deep
-     */
-    public AdaptedCompRowMatrix(Matrix A) {
-        this(A, true);
     }
 
     /**
@@ -536,128 +570,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         return this;
     }
 
-    /**
-     * Iterator over a compressed row matrix
-     */
-    private class CompRowMatrixIterator implements Iterator<MatrixEntry> {
-
-        private int row, cursor;
-
-        private CompRowMatrixEntry entry = new CompRowMatrixEntry();
-
-        public CompRowMatrixIterator() {
-            // Find first non-empty row
-            nextNonEmptyRow();
-        }
-
-        /**
-         * Locates the first non-empty row, starting at the current. After the
-         * new row has been found, the cursor is also updated
-         */
-        private void nextNonEmptyRow() {
-            while (row < numRows() && rowPointer.array()[row] == rowPointer.array()[row + 1])
-                row++;
-            cursor = rowPointer.array()[row];
-        }
-
-        public boolean hasNext() {
-            return cursor < data.capacity();
-        }
-
-        public MatrixEntry next() {
-            entry.update(row, cursor);
-
-            // Next position is in the same row
-            if (cursor < rowPointer.array()[row + 1] - 1)
-                cursor++;
-
-            // Next position is at the following (non-empty) row
-            else {
-                row++;
-                nextNonEmptyRow();
-            }
-
-            return entry;
-        }
-
-        public void remove() {
-            entry.set(0);
-        }
-
-    }
-
     public IntBuffer getRowPointer() {
         return rowPointer;
-    }
-
-
-
-    /**
-     * Entry of a compressed row matrix
-     */
-    private class CompRowMatrixEntry implements MatrixEntry {
-
-        private int row, cursor;
-
-        /**
-         * Updates the entry
-         */
-        public void update(int row, int cursor) {
-            this.row = row;
-            this.cursor = cursor;
-        }
-
-        public int row() {
-            return row;
-        }
-
-        public int column() {
-            return columnIndex.array()[cursor];
-        }
-
-        public double get() {
-            return data.get(cursor);
-        }
-
-        public void set(double value) {
-            throw new UnsupportedOperationException("Sorry");
-
-//            data[cursor] = value;
-        }
-    }
-
-    public static AdaptedCompRowMatrix buildFromSortedIterator(Iterator<Tuple3<Integer, Integer, Double>> values, int rows, int cols) {
-        List<Double> data = new ArrayList<>();
-
-        int lastRow = -1;
-
-        // The nonzero column indices on each row
-        int[][] nnz = new int[rows][0];
-        ArrayList<Object> colIndices = new ArrayList<>();
-
-        while (values.hasNext()) {
-            Tuple3<Integer, Integer, Double> value = values.next();
-            data.add(value.f2);
-
-            if(value.f0 > lastRow && lastRow > -1) {
-                Preconditions.checkArgument(lastRow < value.f0, "We need a sorted list");
-                // flush last row
-               nnz[lastRow] = ArrayUtils.toPrimitive(colIndices.toArray(new Integer[colIndices.size()]));
-               colIndices.clear();
-            }
-
-            colIndices.add(value.f1);
-            lastRow = value.f0;
-        }
-
-        nnz[lastRow] = ArrayUtils.toPrimitive(colIndices.toArray(new Integer[colIndices.size()]));
-
-        AdaptedCompRowMatrix constructed = new AdaptedCompRowMatrix(rows, cols, nnz, ArrayUtils.toPrimitive(data.toArray(new Double[data.size()])));
-
-        //constructed.data = ArrayUtils.toPrimitive(data.toArray(new Double[data.size()]));
-
-        return constructed;
-
     }
 
     @Override
@@ -744,5 +658,89 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
         }*/
 
+    }
+
+    /**
+     * Iterator over a compressed row matrix
+     */
+    private class CompRowMatrixIterator implements Iterator<MatrixEntry> {
+
+        private int row, cursor;
+
+        private CompRowMatrixEntry entry = new CompRowMatrixEntry();
+
+        public CompRowMatrixIterator() {
+            // Find first non-empty row
+            nextNonEmptyRow();
+        }
+
+        /**
+         * Locates the first non-empty row, starting at the current. After the
+         * new row has been found, the cursor is also updated
+         */
+        private void nextNonEmptyRow() {
+            while (row < numRows() && rowPointer.get(row) == rowPointer.get(row + 1))
+                row++;
+            cursor = rowPointer.get(row);
+        }
+
+        public boolean hasNext() {
+            return cursor < data.capacity();
+        }
+
+        public MatrixEntry next() {
+            entry.update(row, cursor);
+
+            // Next position is in the same row
+            if (cursor < rowPointer.get(row + 1) - 1)
+                cursor++;
+
+            // Next position is at the following (non-empty) row
+            else {
+                row++;
+                nextNonEmptyRow();
+            }
+
+            return entry;
+        }
+
+        public void remove() {
+            entry.set(0);
+        }
+
+    }
+
+    /**
+     * Entry of a compressed row matrix
+     */
+    private class CompRowMatrixEntry implements MatrixEntry {
+
+        private int row, cursor;
+
+        /**
+         * Updates the entry
+         */
+        public void update(int row, int cursor) {
+            this.row = row;
+            this.cursor = cursor;
+        }
+
+        public int row() {
+            return row;
+        }
+
+        public int column() {
+            return columnIndex.get(cursor);
+        }
+
+        public double get() {
+            return data.get(cursor);
+        }
+
+        public void set(double value) {
+            throw new UnsupportedOperationException("Sorry");
+
+//            data[cursor] = value;
+        }
     }
 }

@@ -53,7 +53,7 @@ public class Evaluate {
 
         double[][] thedata = smalldiagonalMatrix;
 
-        CSRSpecialMatrix.loadData(thedata).print();
+        new CSRSpecialMatrix(thedata).print();
 
         for (int i = 1; i <= thedata.length; i++) {
 
@@ -66,10 +66,10 @@ public class Evaluate {
             Multiset<String> memoryComplexity = HashMultiset.create();
 
             for (double[][] block : blocks) {
-                CSCSpecialMatrix cscSpecialMatrix = CSCSpecialMatrix.loadData(block);
-                CSRSpecialMatrix csrSpecialMatrix = CSRSpecialMatrix.loadData(block);
-                CDSSpecialMatrix cdsSpecialMatrix = CDSSpecialMatrix.loadData(block);
-                DenseSpecialMatrix denseSpecialMatrix = DenseSpecialMatrix.loadData(block);
+                CSCSpecialMatrix cscSpecialMatrix = new CSCSpecialMatrix(block);
+                CSRSpecialMatrix csrSpecialMatrix = new CSRSpecialMatrix(block);
+                CDSSpecialMatrix cdsSpecialMatrix = new CDSSpecialMatrix(block);
+                DenseSpecialMatrix denseSpecialMatrix = new DenseSpecialMatrix(block);
                 for (BaseMatrix matrix : Lists.newArrayList(cscSpecialMatrix, csrSpecialMatrix, cdsSpecialMatrix, denseSpecialMatrix)) {
                     storageCounter.add(matrix.getName(), matrix.getStorageSize());
                     multComplexity.add(matrix.getName(), matrix.getMultComplexity().getOperationsCounter());

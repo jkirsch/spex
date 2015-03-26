@@ -15,10 +15,16 @@ public class AdaptedCompRowMatrixSerializerTest extends AbstractIOTest {
     public void testSerialization() throws Exception {
 
         final MatrixBlock matrixBlock = generateBlock(0, 0, 2, 2, 0, 0, 1, 1, 0, 1);
-        Matrix matrix = new AdaptedCompRowMatrix(matrixBlock.getMatrix());
+        AdaptedCompRowMatrix matrix = new AdaptedCompRowMatrix(matrixBlock.getMatrix());
 
-        serialize(matrix);
-        AdaptedCompRowMatrix matrix1 = deserialize(AdaptedCompRowMatrix.class);
+        TestOutputView testOutputView = new TestOutputView();
+
+        // serialize
+        matrix.write(testOutputView);
+
+        // read back
+        AdaptedCompRowMatrix matrix1 = new AdaptedCompRowMatrix();
+        matrix1.read(testOutputView.getInputView());
 
         System.out.println(matrix);
 

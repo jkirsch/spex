@@ -27,21 +27,11 @@ public class CSCSpecialMatrix extends BaseMatrix {
      */
     int[] rowIndex;
 
-    public static CSCSpecialMatrix loadData(double[][] matrix) {
-
-        // here we need to load the data
-
-        CSCSpecialMatrix m = new CSCSpecialMatrix();
-
-        // assume rectangular
-        m.numRows = matrix.length;
-        m.numColumns = matrix[0].length;
-
-        return m.loadDataInternal(matrix);
-
+    public CSCSpecialMatrix(double[][] matrix) {
+        super(matrix);
     }
 
-    private CSCSpecialMatrix loadDataInternal(double[][] matrix) {
+    protected CSCSpecialMatrix loadDataInternal(double[][] matrix) {
 
         // Find the number of entries on each column
         List<Set<Integer>> cnz = new ArrayList<>(numColumns);

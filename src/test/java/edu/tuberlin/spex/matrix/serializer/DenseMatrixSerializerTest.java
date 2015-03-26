@@ -1,6 +1,7 @@
 package edu.tuberlin.spex.matrix.serializer;
 
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
+import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
 import no.uib.cipr.matrix.Matrix;
 import org.junit.Assert;
 import org.junit.Test;
@@ -16,8 +17,16 @@ public class DenseMatrixSerializerTest extends AbstractIOTest {
 
         final MatrixBlock matrixBlock = generateBlock(0, 0, 2, 2, 0, 0, 1, 1, 0, 1);
 
-        serialize(matrixBlock);
-        MatrixBlock matrixBlock1 = deserialize(MatrixBlock.class);
+        TestOutputView testOutputView = new TestOutputView();
+
+        // serialize
+
+        ((AdaptedCompRowMatrix)matrixBlock.getMatrix()).write(testOutputView);
+
+        AdaptedCompRowMatrix m1 = new AdaptedCompRowMatrix();
+        m1.read(testOutputView.getInputView());
+
+        MatrixBlock matrixBlock1 = new MatrixBlock(0,0, m1);
 
         System.out.println(matrixBlock1);
 

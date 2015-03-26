@@ -33,7 +33,7 @@ public class Normalizer {
         final double c = 0.85;
 
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-        env.setDegreeOfParallelism(1);
+        env.setParallelism(1);
 
         FlatMapOperator<String, Cell> items = env.readTextFile("datasets/webNotreDame.mtx").flatMap(new RichFlatMapFunction<String, Cell>() {
             @Override

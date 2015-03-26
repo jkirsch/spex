@@ -17,18 +17,9 @@ public class CDSSpecialMatrix extends BaseMatrix {
     private double[][] diag;
     private int[] ind;
 
-    public static CDSSpecialMatrix loadData(double[][] matrix) {
 
-        // here we need to load the data
-
-        CDSSpecialMatrix m = new CDSSpecialMatrix();
-
-        // assume rectangular
-        m.numRows = matrix.length;
-        m.numColumns = matrix.length;
-
-        return m.loadDataInternal(matrix);
-
+    public CDSSpecialMatrix(double[][] matrix) {
+        super(matrix);
     }
 
     /**
@@ -79,7 +70,7 @@ public class CDSSpecialMatrix extends BaseMatrix {
             return mid - 1; // One before start
     }
 
-    private CDSSpecialMatrix loadDataInternal(double[][] matrix) {
+    protected CDSSpecialMatrix loadDataInternal(double[][] matrix) {
 
         int numEntries = getNNZ(matrix);
 

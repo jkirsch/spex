@@ -18,19 +18,11 @@ public class CSRSpecialMatrix extends BaseMatrix {
     private IntBuffer rowPointer;
     private IntBuffer columnIndex;
 
-    public static CSRSpecialMatrix loadData(double[][] matrix) {
-        // here we need to load the data
-
-        CSRSpecialMatrix m = new CSRSpecialMatrix();
-
-        // assume rectangular
-        m.numRows = matrix.length;
-        m.numColumns = matrix[0].length;
-
-        return m.loadDataInternal(matrix);
+    public CSRSpecialMatrix(double[][] matrix) {
+        super(matrix);
     }
 
-    private CSRSpecialMatrix loadDataInternal(double[][] matrix) {
+    protected CSRSpecialMatrix loadDataInternal(double[][] matrix) {
 
         // build up the arrays
 
