@@ -24,7 +24,7 @@
         <maven.compiler.target>1.7</maven.compiler.target>
         <jdkLevel>1.7</jdkLevel>
 
-        <maven.build.timestamp.format>yyyy-MM-dd HH:mm</maven.build.timestamp.format>
+        <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ssa</maven.build.timestamp.format>
         <timestamp>${maven.build.timestamp}</timestamp>
 
         <flink.version>0.9-SNAPSHOT</flink.version>
