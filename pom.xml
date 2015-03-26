@@ -341,6 +341,7 @@
                         <reuseForks>${flink.reuseForks}</reuseForks>
                         <systemPropertyVariables>
                             <forkNumber>0${surefire.forkNumber}</forkNumber>
+                            <taskmanager.network.numberOfBuffers>4096</taskmanager.network.numberOfBuffers>
                         </systemPropertyVariables>
                         <argLine>-Xms256m -Xmx800m -Dmvn.forkNumber=${surefire.forkNumber} -XX:-UseGCOverheadLimit</argLine>
                     </configuration>
