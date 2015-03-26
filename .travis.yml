@@ -8,5 +8,5 @@ cache:
 
 language: java
 
-after_success:
+after_script:
   - mvn clean cobertura:cobertura coveralls:report
