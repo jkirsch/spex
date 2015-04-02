@@ -14,4 +14,4 @@ script:
   - mvn test -P coveralls
 
 after_script:
-  - mvn jacoco:report coveralls:jacoco -P coveralls
+  - mvn jacoco:report coveralls:report -P coveralls
