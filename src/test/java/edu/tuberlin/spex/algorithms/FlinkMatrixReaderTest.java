@@ -50,7 +50,7 @@ public class FlinkMatrixReaderTest {
     @Test
     public void testCreate() throws Exception {
         Configuration conf = new Configuration();
-        conf.setFloat(ConfigConstants.TASK_MANAGER_NETWORK_NUM_BUFFERS_KEY, 4096);
+        conf.setInteger(ConfigConstants.TASK_MANAGER_NETWORK_NUM_BUFFERS_KEY, 4096);
 
         ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment(conf);
         env.setParallelism(1);
@@ -115,7 +115,7 @@ public class FlinkMatrixReaderTest {
     @Test
     public void testExecute() throws Exception {
         Configuration conf = new Configuration();
-        conf.setFloat(ConfigConstants.TASK_MANAGER_NETWORK_NUM_BUFFERS_KEY, 4096);
+        conf.setInteger(ConfigConstants.TASK_MANAGER_NETWORK_NUM_BUFFERS_KEY, 4096);
 
         ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment(conf);
 

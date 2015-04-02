@@ -32,6 +32,9 @@
 
         <guava.version>18.0</guava.version>
 
+        <jacoco.version>0.7.4.201502262128</jacoco.version>
+        <coveralls-maven.version>3.1.0</coveralls-maven.version>
+
         <!-- COPIED FROM FLINK MASTER-->
         <!-- Need to use a user property here because the surefire/failsafe
              forkCount is not exposed as a property. With this we can set
@@ -40,6 +43,8 @@
         <flink.reuseForks>true</flink.reuseForks>
         <!-- For testing reduce the logging -->
         <logback.configurationFile>log4j-test.xml</logback.configurationFile>
+
+        <argLine>-Xms256m -Xmx800m -Dmvn.forkNumber=${surefire.forkNumber} -XX:-UseGCOverheadLimit -Dlogback.configurationFile=${logback.configurationFile}</argLine>
 
     </properties>
 
@@ -184,18 +189,6 @@
             </plugin>
 
             <plugin>
-                <groupId>org.codehaus.mojo</groupId>
-                <artifactId>cobertura-maven-plugin</artifactId>
-                <configuration>
-                    <formats>
-                        <format>html</format>
-                        <format>xml</format>
-                    </formats>
-                </configuration>
-            </plugin>
-
-
-            <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <configuration>
@@ -292,11 +285,6 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>org.eluder.coveralls</groupId>
-                <artifactId>coveralls-maven-plugin</artifactId>
-                <version>3.1.0</version>
-            </plugin>
         </plugins>
 
 
@@ -346,7 +334,6 @@
                             <taskmanager.network.numberOfBuffers>4096</taskmanager.network.numberOfBuffers>
                             <log.level>WARN</log.level>
                         </systemPropertyVariables>
-                        <argLine>-Xms256m -Xmx800m -Dmvn.forkNumber=${surefire.forkNumber} -XX:-UseGCOverheadLimit -Dlogback.configurationFile=${logback.configurationFile}</argLine>
                     </configuration>
                 </plugin>
                 <plugin>
@@ -402,14 +389,38 @@
                     <artifactId>maven-assembly-plugin</artifactId>
                     <version>2.5.3</version>
                 </plugin>
-                <plugin>
-                    <groupId>org.codehaus.mojo</groupId>
-                    <artifactId>cobertura-maven-plugin</artifactId>
-                    <version>2.7</version>
-                </plugin>
             </plugins>
         </pluginManagement>
     </build>
+
+    <profiles>
+        <profile>
+            <id>coveralls</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.jacoco</groupId>
+                        <artifactId>jacoco-maven-plugin</artifactId>
+                        <version>${jacoco.version}</version>
+                        <executions>
+                            <execution>
+                                <id>prepare-agent</id>
+                                <goals>
+                                    <goal>prepare-agent</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.eluder.coveralls</groupId>
+                        <artifactId>coveralls-maven-plugin</artifactId>
+                        <version>${coveralls-maven.version}</version>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
     <repositories>
         <repository>

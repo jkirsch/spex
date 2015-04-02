@@ -8,5 +8,10 @@ cache:
 
 language: java
 
+install: echo 'Skipping mvn install'
+
+script:
+  - mvn test -P coveralls
+
 after_script:
-  - mvn clean cobertura:cobertura coveralls:report
+  - mvn jacoco:report coveralls:jacoco -P coveralls
