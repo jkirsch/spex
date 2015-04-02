@@ -38,6 +38,8 @@
              it on the "mvn" commandline in travis. -->
         <flink.forkCount>1.5C</flink.forkCount>
         <flink.reuseForks>true</flink.reuseForks>
+        <!-- For testing reduce the logging -->
+        <logback.configurationFile>log4j-test.xml</logback.configurationFile>
 
     </properties>
 
@@ -342,8 +344,9 @@
                         <systemPropertyVariables>
                             <forkNumber>0${surefire.forkNumber}</forkNumber>
                             <taskmanager.network.numberOfBuffers>4096</taskmanager.network.numberOfBuffers>
+                            <log.level>WARN</log.level>
                         </systemPropertyVariables>
-                        <argLine>-Xms256m -Xmx800m -Dmvn.forkNumber=${surefire.forkNumber} -XX:-UseGCOverheadLimit</argLine>
+                        <argLine>-Xms256m -Xmx800m -Dmvn.forkNumber=${surefire.forkNumber} -XX:-UseGCOverheadLimit -Dlogback.configurationFile=${logback.configurationFile}</argLine>
                     </configuration>
                 </plugin>
                 <plugin>
