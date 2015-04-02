@@ -14,6 +14,8 @@ import org.apache.flink.api.java.operators.DeltaIteration;
 import org.apache.flink.api.java.operators.GroupReduceOperator;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.configuration.ConfigConstants;
+import org.apache.flink.configuration.Configuration;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -24,6 +26,20 @@ import static org.hamcrest.Matchers.closeTo;
 
 public class FlinkMatrixReaderTest {
 
+    // Implementing Fisher–Yates shuffle
+    static void shuffleArray(int[][] ar)
+    {
+        Random rnd = new Random();
+        for (int i = ar.length - 1; i > 0; i--)
+        {
+            int index = rnd.nextInt(i + 1);
+            // Simple swap
+            int[] a = ar[index];
+            ar[index] = ar[i];
+            ar[i] = a;
+        }
+    }
+
     @Test
     public void testKnown() throws Exception {
 
@@ -33,8 +49,11 @@ public class FlinkMatrixReaderTest {
 
     @Test
     public void testCreate() throws Exception {
-        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-        env.setDegreeOfParallelism(1);
+        Configuration conf = new Configuration();
+        conf.setFloat(ConfigConstants.TASK_MANAGER_NETWORK_NUM_BUFFERS_KEY, 4096);
+
+        ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment(conf);
+        env.setParallelism(1);
 
         final double alpha = 0.80;
         final int n = 8;
@@ -95,7 +114,10 @@ public class FlinkMatrixReaderTest {
 
     @Test
     public void testExecute() throws Exception {
-        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
+        Configuration conf = new Configuration();
+        conf.setFloat(ConfigConstants.TASK_MANAGER_NETWORK_NUM_BUFFERS_KEY, 4096);
+
+        ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment(conf);
 
         final double alpha = 0.80;
         final int n = 8;
@@ -132,20 +154,6 @@ public class FlinkMatrixReaderTest {
 
         }
 
-    }
-
-    // Implementing Fisher–Yates shuffle
-    static void shuffleArray(int[][] ar)
-    {
-        Random rnd = new Random();
-        for (int i = ar.length - 1; i > 0; i--)
-        {
-            int index = rnd.nextInt(i + 1);
-            // Simple swap
-            int[] a = ar[index];
-            ar[index] = ar[i];
-            ar[i] = a;
-        }
     }
 
 }

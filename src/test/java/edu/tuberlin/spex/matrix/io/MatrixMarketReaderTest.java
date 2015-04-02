@@ -11,7 +11,7 @@ public class MatrixMarketReaderTest {
     public void testRead() throws Exception {
 
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-        env.setDegreeOfParallelism(1);
+        env.setParallelism(1);
 
         MatrixMarketReader matrixMarketReader = new MatrixMarketReader(env);
 
