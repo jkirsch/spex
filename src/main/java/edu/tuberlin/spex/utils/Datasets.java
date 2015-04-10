@@ -2,6 +2,7 @@ package edu.tuberlin.spex.utils;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
+import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -14,6 +15,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Date: 13.01.2015
@@ -24,22 +26,6 @@ public class Datasets {
     private static final Logger LOG = LoggerFactory.getLogger(Datasets.class);
 
     private String targetDirectory = "datasets";
-
-    public enum GRAPHS {
-        webBerkStan("http://snap.stanford.edu/data/web-BerkStan.txt.gz"),
-        webNotreDame("http://snap.stanford.edu/data/web-NotreDame.txt.gz"),
-        webStanford("http://snap.stanford.edu/data/web-Stanford.txt.gz"),
-        youtTube("http://snap.stanford.edu/data/bigdata/communities/com-youtube.ungraph.txt.gz"),
-        dblp("http://snap.stanford.edu/data/bigdata/communities/com-dblp.ungraph.txt.gz"),
-        patents("http://snap.stanford.edu/data/cit-Patents.txt.gz"),
-        liveJournal("http://snap.stanford.edu/data/bigdata/communities/com-lj.ungraph.txt.gz");
-
-        private String url;
-
-        GRAPHS(String url) {
-            this.url = url;
-        }
-    }
 
     public Path get(GRAPHS dataset) throws IOException {
 
@@ -70,12 +56,35 @@ public class Datasets {
         if (!dir.isDirectory() && !dir.mkdirs()) {
             LOG.error("Can't create directory at {} ", targetDirectory);
         }
-        FileOutputStream fos = new FileOutputStream(new File(targetDirectory, name));
+        File outputFile = new File(targetDirectory, name);
+        FileOutputStream fos = new FileOutputStream(outputFile);
         fos.getChannel().transferFrom(rbc, 0, Long.MAX_VALUE);
 
-        LOG.info("Downloaded in {}", stopwatch.stop().toString());
+        stopwatch.stop();
+
+        LOG.info("Downloaded in {} with {} in {} Kb/s",
+                stopwatch.toString(),
+                FileUtils.byteCountToDisplaySize(outputFile.length()),
+                (outputFile.length() / 1024 / stopwatch.elapsed(TimeUnit.SECONDS)));
+
         fos.close();
         rbc.close();
+    }
+
+    public enum GRAPHS {
+        webBerkStan("http://snap.stanford.edu/data/web-BerkStan.txt.gz"),
+        webNotreDame("http://snap.stanford.edu/data/web-NotreDame.txt.gz"),
+        webStanford("http://snap.stanford.edu/data/web-Stanford.txt.gz"),
+        youtTube("http://snap.stanford.edu/data/bigdata/communities/com-youtube.ungraph.txt.gz"),
+        dblp("http://snap.stanford.edu/data/bigdata/communities/com-dblp.ungraph.txt.gz"),
+        patents("http://snap.stanford.edu/data/cit-Patents.txt.gz"),
+        liveJournal("http://snap.stanford.edu/data/bigdata/communities/com-lj.ungraph.txt.gz");
+
+        private String url;
+
+        GRAPHS(String url) {
+            this.url = url;
+        }
     }
 
 }
