@@ -95,6 +95,7 @@ public class FlinkMatrixReaderTest {
         DenseMatrix m = new DenseMatrix(n, n);
 
         for (int[] positions : pos) {
+            // subtract -1 .. as the index is 0 based
             int row = positions[0] - 1;
             int col = positions[1] - 1;
 

@@ -15,9 +15,8 @@ import org.apache.flink.api.java.tuple.Tuple3;
 public class MatrixMarketReader {
 
     final ExecutionEnvironment env;
-    private DataSource<Tuple3<Integer, Integer, Double>> dataSource;
-
     boolean transpose = false;
+    private DataSource<Tuple3<Integer, Integer, Double>> dataSource;
     private int offset = 0;
 
     public MatrixMarketReader(ExecutionEnvironment env) {
@@ -36,7 +35,7 @@ public class MatrixMarketReader {
         return this;
     }
 
-    public MatrixMarketReader withOffsee(int offset) {
+    public MatrixMarketReader withOffset(int offset) {
         Preconditions.checkNotNull(dataSource, "Please set the Path first");
         this.offset = offset;
         return this;

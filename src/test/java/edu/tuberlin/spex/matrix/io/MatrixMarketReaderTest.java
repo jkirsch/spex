@@ -16,7 +16,7 @@ public class MatrixMarketReaderTest {
         MatrixMarketReader matrixMarketReader = new MatrixMarketReader(env);
 
         MapOperator<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>> build =
-                matrixMarketReader.fromPath("datasets/webNotreDame.mtx").withOffsee(-1).transpose().build();
+                matrixMarketReader.fromPath("datasets/webNotreDame.mtx").withOffset(-1).transpose().build();
 
 
         build.print();
