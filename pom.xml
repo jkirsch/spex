@@ -16,6 +16,10 @@
         </license>
     </licenses>
 
+    <prerequisites>
+        <maven>3</maven>
+    </prerequisites>
+
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.outputEncoding>UTF-8</project.build.outputEncoding>
@@ -42,7 +46,7 @@
         <flink.forkCount>1.5C</flink.forkCount>
         <flink.reuseForks>true</flink.reuseForks>
         <!-- For testing reduce the logging -->
-        <logback.configurationFile>log4j-test.xml</logback.configurationFile>
+        <logback.configurationFile>logback-test.xml</logback.configurationFile>
 
         <argLine>-Xms256m -Xmx800m -Dmvn.forkNumber=${surefire.forkNumber} -XX:-UseGCOverheadLimit -Dlogback.configurationFile=${logback.configurationFile}</argLine>
 
