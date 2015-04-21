@@ -65,6 +65,10 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
         this.transpose = transpose;
     }
 
+    public static MatrixInformation getMatrixInfo(java.nio.file.Path path) throws IOException {
+        return getMatrixInfo(path.toFile().getAbsolutePath());
+    }
+
     public static MatrixInformation getMatrixInfo(String filename) throws IOException {
         // get Dimensions
 
@@ -260,7 +264,7 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
         return null;
     }
 
-        public static class MatrixInformation {
+    public static class MatrixInformation {
 
         MatrixInfo matrixInfo;
         int n;
