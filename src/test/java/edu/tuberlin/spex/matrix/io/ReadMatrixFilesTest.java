@@ -52,7 +52,7 @@ public class ReadMatrixFilesTest {
         MatrixMarketReader matrixMarketReader = new MatrixMarketReader(env);
 
         MapOperator<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>> build =
-                matrixMarketReader.fromPath(path).withOffset(-1).withInfo(matrixInfo).build();
+                matrixMarketReader.fromPath(path).withOffsetAdjust(-1).withInfo(matrixInfo).build();
 
         GroupReduceOperator<Tuple3<Integer, Integer, Double>, Long> counts = build.reduceGroup(new GroupReduceFunction<Tuple3<Integer, Integer, Double>, Long>() {
             @Override
@@ -70,10 +70,10 @@ public class ReadMatrixFilesTest {
         // print is here to ensure we have some output
         counts.print();
 
-
         env.execute();
 
-        System.out.println(matrixInfo);
+        LOG.info(matrixInfo.toString());
+
 
         assertThat(counted, is(matrixInfo.getValues()));
     }

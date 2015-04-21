@@ -1,17 +1,22 @@
 package edu.tuberlin.spex.matrix.io;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.base.Preconditions;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
 import org.apache.flink.api.common.functions.FilterFunction;
+import org.apache.flink.api.common.functions.FlatMapFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.functions.FunctionAnnotation;
 import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.operators.FilterOperator;
+import org.apache.flink.api.java.operators.FlatMapOperator;
 import org.apache.flink.api.java.operators.MapOperator;
 import org.apache.flink.api.java.tuple.Tuple3;
+import org.apache.flink.util.Collector;
 
 import java.nio.file.Path;
+import java.util.Objects;
 
 /**
  * Date: 24.02.2015
@@ -55,7 +60,13 @@ public class MatrixMarketReader {
         return this;
     }
 
-    public MatrixMarketReader withOffset(int offset) {
+    /**
+     * Adjusts the offset to make ot 0 based.
+     *
+     * @param offset adds the offset to each row and column
+     * @return the builder
+     */
+    public MatrixMarketReader withOffsetAdjust(int offset) {
         Preconditions.checkNotNull(dataSource, "Please set the Path first");
         this.offset = offset;
         return this;
@@ -68,12 +79,19 @@ public class MatrixMarketReader {
         // now ensure that we filter out the first line, which has the dimensions
         FilterOperator<Tuple3<Integer, Integer, Double>> filtered = dataSource.filter(new FilterEntries(info.getN(), info.getM(), info.getValues()));
 
-        // if transpose generate the inverse
-        MapOperator<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>> map = filtered.map(new OffsetMapper(offset));
-        if (transpose) {
-            return map.map(new TransposeMapper());
+        FlatMapOperator<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>> symmetry = null;
+
+        if(info.getMatrixInfo().isSymmetric()) {
+            symmetry = filtered.flatMap(new SymmetryMapper());
         }
-        return map;
+
+        // if transpose generate the inverse during reading
+        // adjust the offsets
+        if (transpose) {
+            return MoreObjects.firstNonNull(symmetry, filtered).map(new TransposeMapper()).map(new OffsetMapper(offset));
+        }
+
+        return MoreObjects.firstNonNull(symmetry, filtered).map(new OffsetMapper(offset));
     }
 
 
@@ -92,6 +110,20 @@ public class MatrixMarketReader {
         @Override
         public boolean filter(Tuple3<Integer, Integer, Double> value) throws Exception {
             return !(value.f0 == n && value.f1 == m && value.f2 == values);
+        }
+    }
+
+    private static class SymmetryMapper implements FlatMapFunction<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>> {
+
+        @Override
+        public void flatMap(Tuple3<Integer, Integer, Double> value, Collector<Tuple3<Integer, Integer, Double>> out) throws Exception {
+
+            // add the symmetry values if we are not on the diagonal
+            if(!Objects.equals(value.f0, value.f1)) {
+                out.collect(new Tuple3<>(value.f1, value.f0, value.f2));
+            }
+
+            out.collect(value);
         }
     }
 
