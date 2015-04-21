@@ -237,7 +237,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             lastRow = value.f0;
         }
 
-        nnz[lastRow] = ArrayUtils.toPrimitive(colIndices.toArray(new Integer[colIndices.size()]));
+        nnz[lastRow] = ArrayUtils.toPrimitive(colIndices.<Integer>toArray(new Integer[colIndices.size()]));
 
         AdaptedCompRowMatrix constructed = new AdaptedCompRowMatrix(rows, cols, nnz, ArrayUtils.toPrimitive(data.toArray(new Double[data.size()])));
 

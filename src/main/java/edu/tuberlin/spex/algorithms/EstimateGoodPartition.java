@@ -29,7 +29,7 @@ public class EstimateGoodPartition {
         String path = "datasets/smallTest.csv";
 
         // read the size information
-        int n = MatrixReaderInputFormat.getSize(path);
+        int n = MatrixReaderInputFormat.getMatrixInfo(path).getN();
 
         // now read the dataset
         EstimateGoodPartition estimateGoodPartition = new EstimateGoodPartition();

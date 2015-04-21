@@ -89,7 +89,7 @@ public class FlinkMatrixReader implements Serializable {
         }
 
         // read the size information
-        int n = MatrixReaderInputFormat.getSize(path);
+        int n = MatrixReaderInputFormat.getMatrixInfo(path).getN();
 
         LOG.info("Analysing {} with {} nodes using parallelism {} for the blocksizes {} ", path, n, env.getParallelism(), blockSizes);
 

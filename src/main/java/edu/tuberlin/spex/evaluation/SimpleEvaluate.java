@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * 24.03.2015.
  */
-public class Evaluate {
+public class SimpleEvaluate {
 
     public static void main(String[] args) {
 
