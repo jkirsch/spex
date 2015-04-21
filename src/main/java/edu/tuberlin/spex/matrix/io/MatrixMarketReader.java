@@ -8,6 +8,8 @@ import org.apache.flink.api.java.operators.DataSource;
 import org.apache.flink.api.java.operators.MapOperator;
 import org.apache.flink.api.java.tuple.Tuple3;
 
+import java.nio.file.Path;
+
 /**
  * Date: 24.02.2015
  * Time: 11:16
@@ -23,6 +25,10 @@ public class MatrixMarketReader {
         this.env = env;
     }
 
+
+    public MatrixMarketReader fromPath(Path path) {
+        return fromPath(path.toFile().getAbsolutePath());
+    }
 
     public MatrixMarketReader fromPath(String path) {
         dataSource = env.readCsvFile(path).ignoreInvalidLines().ignoreComments("%").fieldDelimiter(" ").types(Integer.class, Integer.class, Double.class);
