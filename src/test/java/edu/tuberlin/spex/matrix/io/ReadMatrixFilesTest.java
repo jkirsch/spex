@@ -28,9 +28,9 @@ import static org.junit.Assert.assertThat;
  * @author Johannes Kirschnick
  */
 @RunWith(Parameterized.class)
-public class TestReadMatrixFiles {
+public class ReadMatrixFilesTest {
 
-    private static final Logger LOG = LoggerFactory.getLogger(TestReadMatrixFiles.class);
+    private static final Logger LOG = LoggerFactory.getLogger(ReadMatrixFilesTest.class);
     @Parameterized.Parameter
     public ExperimentDatasets.Matrix testMatrix;
 
