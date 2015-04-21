@@ -300,44 +300,5 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
             return values;
         }
     }
-public static class MatrixInformation {
 
-        MatrixInfo matrixInfo;
-        int n;
-        int m;
-        long values;
-
-        public MatrixInformation(MatrixInfo matrixInfo, int n, int m, long values) {
-            this.matrixInfo = matrixInfo;
-            this.n = n;
-            this.m = m;
-            this.values = values;
-        }
-
-        @Override
-        public String toString() {
-            return "MatrixInformation{" +
-                    "matrixInfo=" + matrixInfo +
-                    ", n=" + n +
-                    ", m=" + m +
-                    ", values=" + values +
-                    '}';
-        }
-
-        public MatrixInfo getMatrixInfo() {
-            return matrixInfo;
-        }
-
-        public int getN() {
-            return n;
-        }
-
-        public int getM() {
-            return m;
-        }
-
-        public long getValues() {
-            return values;
-        }
-    }
 }

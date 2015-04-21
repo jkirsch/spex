@@ -31,9 +31,9 @@ import java.util.concurrent.TimeUnit;
 public class ExperimentDatasets {
 
     private static final Logger LOG = LoggerFactory.getLogger(ExperimentDatasets.class);
-    private String targetDirectory = "datasets";
+    private static final String targetDirectory = "datasets";
 
-    public Path get(Matrix dataset) throws IOException, ArchiveException {
+    public static Path get(Matrix dataset) throws IOException, ArchiveException {
 
         String location = dataset.url;
 
@@ -55,7 +55,7 @@ public class ExperimentDatasets {
         return path;
     }
 
-    private void download(String location) throws IOException, ArchiveException {
+    private static void download(String location) throws IOException, ArchiveException {
         LOG.info("Downloading {}", location);
         URL website = new URL(location);
 
