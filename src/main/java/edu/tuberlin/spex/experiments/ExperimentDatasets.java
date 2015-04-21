@@ -101,7 +101,7 @@ public class ExperimentDatasets {
         archiveInputStream.close();
     }
 
-    enum Matrix {
+    public enum Matrix {
 
         mhd1280b("http://www.cise.ufl.edu/research/sparse/MM/Bai/mhd1280b.tar.gz"),
         conf5_0("http://www.cise.ufl.edu/research/sparse/MM/QCD/conf5_0-4x4-10.tar.gz"),
