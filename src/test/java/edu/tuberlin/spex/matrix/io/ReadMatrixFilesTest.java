@@ -37,8 +37,7 @@ public class ReadMatrixFilesTest {
     @Parameterized.Parameters(name = "{index}: Dataset {0}")
     public static Collection<ExperimentDatasets.Matrix> data() {
         return Arrays.asList(
-                ExperimentDatasets.Matrix.lpi_box1
-                //ExperimentDatasets.Matrix.values()
+                ExperimentDatasets.Matrix.values()
         );
     }
 
