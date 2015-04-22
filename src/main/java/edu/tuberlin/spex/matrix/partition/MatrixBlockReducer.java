@@ -23,12 +23,10 @@ import java.util.List;
  */
 public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> {
 
-    int n;
-    int blocks;
-
     final boolean rowNormalize;
     final boolean isTransposed;
-
+    int n;
+    int blocks;
     private DenseVector rowSums;
 
     public MatrixBlockReducer(int n, int blocks, boolean rowNormalize, boolean isTransposed) {
@@ -71,11 +69,10 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, 
 
         // here we have the first instance
         // get the location of the block
-        int blockSize = n / blocks;
 
         // calculate the beginning end row/col of the block
         final MatrixBlockPartitioner.BlockDimensions blockDimensions
-                = MatrixBlockPartitioner.getBlockDimensions(n, blockSize, peek.f0, peek.f1);
+                = MatrixBlockPartitioner.getBlockDimensions(n, blocks, peek.f0, peek.f1);
 
         /*LinkedSparseMatrix matrix = new LinkedSparseMatrix(blockDimensions.getRows(),
                 blockDimensions.getCols());*/

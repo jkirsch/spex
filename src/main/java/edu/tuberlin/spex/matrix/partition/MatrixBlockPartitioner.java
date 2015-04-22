@@ -10,88 +10,134 @@ import java.util.List;
 /**
  * Date: 09.02.2015
  * Time: 22:56
- *
  */
 public class MatrixBlockPartitioner implements KeySelector<Tuple3<Integer, Integer, Double>, Long> {
 
-    /** Size the of dataset. **/
-    final int n;
-
-    /** Number of blocks. */
+    /**
+     * Number of blocks.
+     */
     final int blocks;
-    private final int blockSize;
+    /**
+     * Size the of dataset.
+     */
+    private final int rows;
+    /**
+     * Number of columns.
+     */
+    private final int columns;
     private final int m;
+    private final int rowWidth;
+    private final int colwidth;
 
-    public MatrixBlockPartitioner(int n, int blocks) {
 
-       // Preconditions.checkArgument(blocks % 2 == 0, "Blocks needs to be a factor of two");
-        Preconditions.checkArgument(n >= blocks, "The square matrix needs to have at least the number of block rows");
-
-        this.n = n;
-        this.blocks = blocks;
-        blockSize = n / blocks;
-
-        // how many rows per blocks
-        m = n / blockSize;// + n % blockSize;
+    /**
+     * Creates the partitioner assuming a square matrix.
+     *
+     * @param rows   number of rows
+     * @param blocks number of blocks to split in (per row)
+     */
+    public MatrixBlockPartitioner(int rows, int blocks) {
+        this(rows, rows, blocks);
     }
 
+    /**
+     * Creates a partitioner for a rectangular matrix.
+     *
+     * @param rows    number of rows int the matrix
+     * @param columns number of columns in the matrix
+     * @param blocks  number of block to split (per row)
+     */
+    public MatrixBlockPartitioner(int rows, int columns, int blocks) {
+
+        // Preconditions.checkArgument(blocks % 2 == 0, "Blocks needs to be a factor of two");
+        Preconditions.checkArgument(rows >= blocks, "The matrix needs to have at least the number of row blocks rows");
+        Preconditions.checkArgument(columns >= blocks, "The  matrix needs to have at least the number of column blocks columns");
+
+        this.rows = rows;
+        this.columns = columns;
+
+        this.blocks = blocks;
+        rowWidth = (int) Math.ceil(rows / (double) blocks);
+
+        // how many rows per blocks
+        m = rows / rowWidth;// + rows % rowWidth;
+
+        // how many columns per block
+        colwidth = (int) Math.ceil(columns / (double) blocks);
+    }
+
+    /**
+     * Compute back the block dimensions from the offsets of a square matrix.
+     *
+     * @param inputRow
+     * @param inputCol
+     */
+    public static BlockDimensions getBlockDimensions(Integer n, Integer blocks, Integer inputRow, Integer inputCol) {
+        return getBlockDimensions(n, n, blocks, inputRow, inputCol);
+    }
+
+    /**
+     * Compute back the block dimensions from the offsets of a matrix.
+     *
+     * @param inputRow
+     * @param inputCol
+     */
+    public static BlockDimensions getBlockDimensions(Integer rows, Integer columns, Integer blocks, Integer inputRow, Integer inputCol) {
+
+        Preconditions.checkArgument(rows > 0);
+        Preconditions.checkArgument(columns > 0);
+        Preconditions.checkArgument(blocks > 0);
+        Preconditions.checkElementIndex(inputRow, rows, "inputRow");
+        Preconditions.checkElementIndex(inputCol, columns, "inputCol");
+
+        int rowWidth = (int) Math.ceil(rows / (double) blocks);
+        // how many columns per block
+
+        int colwidth = (int) Math.ceil(columns / (double) blocks);
+
+        int row = inputRow / rowWidth;
+        int column = inputCol / colwidth;
+
+        int rowSize = row == blocks-1 ? rows - rowWidth*(blocks-1) : rowWidth;
+        int colSize = column == blocks-1 ? columns - colwidth*(blocks-1) : colwidth;
+
+        return new BlockDimensions(row * rowWidth, column * colwidth, rowSize, colSize);
+    }
 
     @Override
     public Long getKey(Tuple3<Integer, Integer, Double> value) throws Exception {
 
-        long row = value.f0 / blockSize;
-        long column = value.f1 / blockSize;
+        long row = value.f0 / rowWidth;
+        long column = value.f1 / colwidth;
 
         long rowIndex;
 
-        if(value.f0 >= blockSize * blocks) {
+        if (value.f0 >= rowWidth * blocks) {
             rowIndex = blocks;
         } else {
             rowIndex = row * blocks;
         }
-        if(value.f1 >= blockSize * blocks) {
-          column =  blocks - 1;
+        if (value.f1 >= colwidth * blocks) {
+            column = blocks - 1;
         }
 
-        return rowIndex  + column;
+        return rowIndex + column;
     }
-
 
     /**
      * Computes the sizes for the different needed vectors for the given partition
-     * @return
+     *
+     * @return list of row dimensions.
      */
     public List<BlockDimensions> computeRowSizes() {
         // blocksize
         List<BlockDimensions> sizes = new ArrayList<>();
         for (int i = 0; i < blocks - 1; i++) {
-            sizes.add(new BlockDimensions(i * blockSize, 0, blockSize, 1));
+            sizes.add(new BlockDimensions(i * rowWidth, 0, rowWidth, 1));
         }
         // take care of the last
-        sizes.add(new BlockDimensions((blocks - 1) * blockSize, 0, n - blockSize * (blocks - 1), 1));
+        sizes.add(new BlockDimensions((blocks - 1) * rowWidth, 0, rows - rowWidth * (blocks - 1), 1));
         return sizes;
-    }
-
-    /**
-     * Compute back the block dimensions from the offsets.
-     * @param inputRow
-     * @param inputCol
-     */
-    public static BlockDimensions getBlockDimensions(Integer n, Integer blockSize, Integer inputRow, Integer inputCol) {
-
-        Preconditions.checkArgument(n > 0);
-        Preconditions.checkArgument(blockSize > 0);
-        Preconditions.checkElementIndex(inputRow, n, "inputRow");
-        Preconditions.checkElementIndex(inputCol, n, "inputCol");
-
-        int row = inputRow / blockSize;
-        int column = inputCol / blockSize;
-
-
-        int rowSize = inputRow >= n - n % blockSize ? n % blockSize : blockSize;
-        int colSize = inputCol >= n - n % blockSize  ? n % blockSize : blockSize;
-
-        return new BlockDimensions(row * blockSize, column * blockSize, rowSize, colSize);
     }
 
     public static class BlockDimensions {

@@ -11,6 +11,7 @@ import org.junit.Test;
 import java.util.List;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 
@@ -37,8 +38,7 @@ public class MatrixBlockPartitionerTest {
 
         List<MatrixBlockPartitioner.BlockDimensions> blockDimensionses = matrixBlockPartitioner.computeRowSizes();
 
-        assertThat(counter.count(0L), is((n / blocks) * (n / blocks)));
-        assertThat(counter.count(3L), is((n / blocks) * (n / blocks) + n));
+        assertThat(counter.elementSet(), hasSize(blocks*blocks));
 
     }
 
@@ -63,8 +63,8 @@ public class MatrixBlockPartitionerTest {
             System.out.println();
         }
 
-        assertThat(cols.count(1), is(n));
-        assertThat(rows.count(1), is(n));
+        assertThat(cols.count(6), is(6*n));
+        assertThat(rows.count(6), is(6*n));
     }
 
     @Test
@@ -73,15 +73,15 @@ public class MatrixBlockPartitionerTest {
         int n = 325729;
         final int blocks = 2;
 
-        MatrixBlockPartitioner.BlockDimensions dims = MatrixBlockPartitioner.getBlockDimensions(n, n / blocks, 325728, 162864);
+        MatrixBlockPartitioner.BlockDimensions dims = MatrixBlockPartitioner.getBlockDimensions(n, blocks, 325728, 162864);
 
-        assertThat(dims.getRowStart(), is(325728));
-        assertThat(dims.getColStart(), is(162864));
-        assertThat(dims.getRows(), is(1));
-        assertThat(dims.getCols(), is(n - 162864 -1));
+        assertThat(dims.getRowStart(), is(162865));
+        assertThat(dims.getColStart(), is(0));
+        assertThat(dims.getRows(), is(162864));
+        assertThat(dims.getCols(), is(n - 162864));
 
 
-        dims = MatrixBlockPartitioner.getBlockDimensions(n, n / blocks, 325727, 325728);
+        dims = MatrixBlockPartitioner.getBlockDimensions(n, blocks, 325727, 325728);
 
         System.out.println(dims);
 
@@ -92,7 +92,7 @@ public class MatrixBlockPartitionerTest {
 
             for (MatrixBlockPartitioner.BlockDimensions blockDimension : blockDimensions) {
 
-                dims = MatrixBlockPartitioner.getBlockDimensions(n, n / blocks, blockDimension.getRowStart(), blockDimension.getColStart());
+                dims = MatrixBlockPartitioner.getBlockDimensions(n, blocks, blockDimension.getRowStart(), blockDimension.getColStart());
                 assertThat(dims.getRowStart(), is(blockDimension.getRowStart()));
                 assertThat(dims.getColStart(), is(blockDimension.getColStart()));
 
@@ -112,10 +112,10 @@ public class MatrixBlockPartitionerTest {
         final int n = 325729;
         final int blocks = 4;
 
-        int blockSize = n / blocks;
+        int blockSize = (int) Math.ceil(n / (double) blocks);
         System.out.println(blockSize);
 
-        MatrixBlockPartitioner.BlockDimensions blockDimensions = MatrixBlockPartitioner.getBlockDimensions(n, blockSize, 11285, 11285);
+        MatrixBlockPartitioner.BlockDimensions blockDimensions = MatrixBlockPartitioner.getBlockDimensions(n, blocks, 11285, 11285);
 
         assertThat(blockDimensions.getRowStart(), is(0));
         assertThat(blockDimensions.getColStart(), is(0));
@@ -158,6 +158,39 @@ public class MatrixBlockPartitionerTest {
         for (VectorBlock vectorBlock : vectorBlocks) {
             assertNotNull(vectorBlock);
         }
+
+    }
+
+    @Test
+    public void testComputeRectangularMatrix() throws Exception {
+        int rows = 8;
+        int columns = 5;
+
+        int blocks = 3;
+
+        MatrixBlockPartitioner partitioner = new MatrixBlockPartitioner(rows, columns, blocks);
+
+        assertThat(partitioner.getKey(new Tuple3<>(0, 0, 2d)), is(0L));
+        assertThat(partitioner.getKey(new Tuple3<>(1, 0, 2d)), is(0L));
+        assertThat(partitioner.getKey(new Tuple3<>(2, 0, 2d)), is(0L));
+
+        assertThat(partitioner.getKey(new Tuple3<>(0, 1, 2d)), is(0L));
+        assertThat(partitioner.getKey(new Tuple3<>(1, 1, 2d)), is(0L));
+        assertThat(partitioner.getKey(new Tuple3<>(2, 1, 2d)), is(0L));
+
+        assertThat(partitioner.getKey(new Tuple3<>(0, 2, 2d)), is(1L));
+        assertThat(partitioner.getKey(new Tuple3<>(1, 2, 2d)), is(1L));
+        assertThat(partitioner.getKey(new Tuple3<>(2, 2, 2d)), is(1L));
+
+        assertThat(partitioner.getKey(new Tuple3<>(0, 3, 2d)), is(1L));
+        assertThat(partitioner.getKey(new Tuple3<>(1, 3, 2d)), is(1L));
+        assertThat(partitioner.getKey(new Tuple3<>(2, 3, 2d)), is(1L));
+
+        assertThat(partitioner.getKey(new Tuple3<>(0, 4, 2d)), is(2L));
+        assertThat(partitioner.getKey(new Tuple3<>(1, 4, 2d)), is(2L));
+        assertThat(partitioner.getKey(new Tuple3<>(2, 4, 2d)), is(2L));
+
+        assertThat(partitioner.getKey(new Tuple3<>(3, 0, 2d)), is(3L));
 
     }
 }
