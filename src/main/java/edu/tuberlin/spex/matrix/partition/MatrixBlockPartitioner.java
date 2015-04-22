@@ -133,10 +133,10 @@ public class MatrixBlockPartitioner implements KeySelector<Tuple3<Integer, Integ
         // blocksize
         List<BlockDimensions> sizes = new ArrayList<>();
         for (int i = 0; i < blocks - 1; i++) {
-            sizes.add(new BlockDimensions(i * rowWidth, 0, rowWidth, 1));
+            sizes.add(new BlockDimensions(i * colwidth, 0, colwidth, 1));
         }
         // take care of the last
-        sizes.add(new BlockDimensions((blocks - 1) * rowWidth, 0, rows - rowWidth * (blocks - 1), 1));
+        sizes.add(new BlockDimensions((blocks - 1) * colwidth, 0, columns - colwidth * (blocks - 1), 1));
         return sizes;
     }
 

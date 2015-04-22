@@ -153,7 +153,7 @@ public class MatrixBlockPartitionerTest {
 
         final int adjustedN = n % blocks > 0?n + (blocks - n % blocks):n;
 
-        List<VectorBlock> vectorBlocks = VectorBlockHelper.createBlocks(adjustedN, blocks, 1 / (double) n);
+        List<VectorBlock> vectorBlocks = VectorBlockHelper.createBlocks(adjustedN, adjustedN, blocks, 1 / (double) n);
 
         for (VectorBlock vectorBlock : vectorBlocks) {
             assertNotNull(vectorBlock);
@@ -169,6 +169,14 @@ public class MatrixBlockPartitionerTest {
         int blocks = 3;
 
         MatrixBlockPartitioner partitioner = new MatrixBlockPartitioner(rows, columns, blocks);
+
+        for (int row = 0; row < rows; row++) {
+            for (int col = 0; col < columns; col++) {
+                Long key = partitioner.getKey(new Tuple3<>(row, col, 2d));
+                System.out.print(key);
+            }
+            System.out.println();
+        }
 
         assertThat(partitioner.getKey(new Tuple3<>(0, 0, 2d)), is(0L));
         assertThat(partitioner.getKey(new Tuple3<>(1, 0, 2d)), is(0L));

@@ -75,7 +75,7 @@ public class PageRankeFlinkMatrixDelta {
 
 
         GroupReduceOperator<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> matrixBlocks = tuple3UnsortedGrouping.
-                reduceGroup(new MatrixBlockReducer(adjustedN, blocks, true, transpose)).withBroadcastSet(colSumsDataSet, "rowSums").name("Build Matrix Blocks");
+                reduceGroup(new MatrixBlockReducer(adjustedN, adjustedN, blocks, true, transpose)).withBroadcastSet(colSumsDataSet, "rowSums").name("Build Matrix Blocks");
 
 
         DataSource<Tuple2<Integer, VectorBlock>> denseVectorDataSource = env.fromCollection(VectorBlockHelper.createTupleBlocks(adjustedN, blocks, 1 / (double) n));

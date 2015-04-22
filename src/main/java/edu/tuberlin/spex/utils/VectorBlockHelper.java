@@ -16,8 +16,8 @@ import java.util.List;
  */
 public class VectorBlockHelper {
 
-    public static List<VectorBlock> createBlocks(final int n, int blockSize, final double init) {
-        MatrixBlockPartitioner matrixBlockPartitioner = new MatrixBlockPartitioner(n, blockSize);
+    public static List<VectorBlock> createBlocks(final int rows, final int cols, int blocks, final double init) {
+        MatrixBlockPartitioner matrixBlockPartitioner = new MatrixBlockPartitioner(rows, cols, blocks);
 
         // get the row partition sizes
         List<MatrixBlockPartitioner.BlockDimensions> blockDimensions = matrixBlockPartitioner.computeRowSizes();

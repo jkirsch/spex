@@ -25,12 +25,14 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, 
 
     final boolean rowNormalize;
     final boolean isTransposed;
-    int n;
+    final int rows;
+    final int colums;
     int blocks;
     private DenseVector rowSums;
 
-    public MatrixBlockReducer(int n, int blocks, boolean rowNormalize, boolean isTransposed) {
-        this.n = n;
+    public MatrixBlockReducer(int rows, int columns, int blocks, boolean rowNormalize, boolean isTransposed) {
+        this.rows = rows;
+        this.colums = columns;
         this.blocks = blocks;
         this.rowNormalize = rowNormalize;
         this.isTransposed = isTransposed;
@@ -44,7 +46,7 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, 
         if(rowNormalize) {
             List<Tuple2<Integer, Double>> aggregatedSums = getRuntimeContext().getBroadcastVariable("rowSums");
 
-            rowSums = new DenseVector(n);
+            rowSums = new DenseVector(rows);
             for (Tuple2<Integer, Double> aggregatedSum : aggregatedSums) {
                 rowSums.set(aggregatedSum.f0, aggregatedSum.f1);
             }
@@ -72,7 +74,7 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, 
 
         // calculate the beginning end row/col of the block
         final MatrixBlockPartitioner.BlockDimensions blockDimensions
-                = MatrixBlockPartitioner.getBlockDimensions(n, blocks, peek.f0, peek.f1);
+                = MatrixBlockPartitioner.getBlockDimensions(rows, colums, blocks, peek.f0, peek.f1);
 
         /*LinkedSparseMatrix matrix = new LinkedSparseMatrix(blockDimensions.getRows(),
                 blockDimensions.getCols());*/
