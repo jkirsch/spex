@@ -50,7 +50,7 @@ public class MatrixMarketReader {
         return this;
     }
 
-    public MatrixMarketReader withInfo(MatrixReaderInputFormat.MatrixInformation info) {
+    public MatrixMarketReader withMatrixInformation(MatrixReaderInputFormat.MatrixInformation info) {
         this.info = info;
         return this;
     }

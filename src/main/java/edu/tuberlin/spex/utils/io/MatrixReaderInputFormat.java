@@ -264,6 +264,10 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
         return null;
     }
 
+    /**
+     * Helper class to store information for a matrix.
+     * Typically read from the matrix market file directly.
+     */
     public static class MatrixInformation {
 
         MatrixInfo matrixInfo;
@@ -271,6 +275,14 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
         int m;
         long values;
 
+        /**
+         * Creates a new MatrixInformation object.
+         *
+         * @param matrixInfo The matrix information about the shape (symmetric or not, as well as complex or real)
+         * @param n          number of rows
+         * @param m          number of columns
+         * @param values     number of entries
+         */
         public MatrixInformation(MatrixInfo matrixInfo, int n, int m, long values) {
             this.matrixInfo = matrixInfo;
             this.n = n;

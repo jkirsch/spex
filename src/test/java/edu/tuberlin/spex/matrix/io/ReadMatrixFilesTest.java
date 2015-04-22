@@ -36,7 +36,10 @@ public class ReadMatrixFilesTest {
 
     @Parameterized.Parameters(name = "{index}: Dataset {0}")
     public static Collection<ExperimentDatasets.Matrix> data() {
-        return Arrays.asList(ExperimentDatasets.Matrix.values());
+        return Arrays.asList(
+                ExperimentDatasets.Matrix.lpi_box1
+                //ExperimentDatasets.Matrix.values()
+        );
     }
 
     @Test
@@ -52,7 +55,7 @@ public class ReadMatrixFilesTest {
         MatrixMarketReader matrixMarketReader = new MatrixMarketReader(env);
 
         MapOperator<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>> build =
-                matrixMarketReader.fromPath(path).withOffsetAdjust(-1).withInfo(matrixInfo).build();
+                matrixMarketReader.fromPath(path).withOffsetAdjust(-1).withMatrixInformation(matrixInfo).build();
 
         GroupReduceOperator<Tuple3<Integer, Integer, Double>, Long> counts = build.reduceGroup(new GroupReduceFunction<Tuple3<Integer, Integer, Double>, Long>() {
             @Override

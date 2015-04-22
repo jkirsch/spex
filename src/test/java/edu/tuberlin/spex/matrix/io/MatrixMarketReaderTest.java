@@ -21,7 +21,7 @@ public class MatrixMarketReaderTest {
         MatrixReaderInputFormat.MatrixInformation matrixInfo = MatrixReaderInputFormat.getMatrixInfo(path);
 
         MapOperator<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>> build =
-                matrixMarketReader.fromPath(path).withOffsetAdjust(-1).withInfo(matrixInfo).transpose().build();
+                matrixMarketReader.fromPath(path).withOffsetAdjust(-1).withMatrixInformation(matrixInfo).transpose().build();
 
 
         build.print();
