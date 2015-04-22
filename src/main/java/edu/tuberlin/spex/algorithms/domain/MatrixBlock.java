@@ -37,8 +37,36 @@ public class MatrixBlock implements Serializable {
         this.matrix = matrix;
     }
 
+    /**
+     * Simple Matrix generator
+     * @param startRow
+     * @param startCol
+     * @param elements elements are a list of row,col,value .. row,col,value ...
+     * @return
+     */
+    public static MatrixBlock generateBlock(int startRow, int startCol, int rows, int columns, int ... elements) {
+
+        Preconditions.checkArgument(elements.length % 3 == 0, "Always 3 elements make a cell");
+        Preconditions.checkArgument(rows < 10,
+                "This is using the DenseFormat which is memory bound and does not support row > 10");
+        Preconditions.checkArgument(columns < 10,
+                "This is using the DenseFormat which is memory bound and does not support columns > 10");
+
+        Matrix matrix = new DenseMatrix(rows, columns);
+
+        for (int i = 0; i < elements.length; i+=3) {
+            matrix.set(elements[i], elements[i + 1], elements[i + 2]);
+        }
+
+        return new MatrixBlock(startRow, startCol, new AdaptedCompRowMatrix(matrix));
+    }
+
     public Matrix getMatrix() {
         return matrix;
+    }
+
+    public void setMatrix(AdaptedCompRowMatrix matrix) {
+        this.matrix = matrix;
     }
 
     public Vector multRealigned(Vector x) {
@@ -53,10 +81,13 @@ public class MatrixBlock implements Serializable {
 
     public Vector mult(VectorBlock x) {
 
-        return matrix.mult(x, new VectorBlock(x.getStartRow(),new DenseVector(x.size())));
+        // Here we create a new result vector, which is big enough to hold the result
+        // it needs to have the dimension of the #of rows
+        DenseVector resultVector = new DenseVector(this.getMatrix().numRows());
+
+        return matrix.mult(x, new VectorBlock(x.getStartRow(), resultVector));
 
     }
-
 
     /**
      * <code>y = A*x</code>
@@ -93,30 +124,6 @@ public class MatrixBlock implements Serializable {
                 '}';
     }
 
-    /**
-     * Simple Matrix generator
-     * @param startRow
-     * @param startCol
-     * @param elements elements are a list of row,col,value .. row,col,value ...
-     * @return
-     */
-    public static MatrixBlock generateBlock(int startRow, int startCol, int rows, int columns, int ... elements) {
-
-        Preconditions.checkArgument(elements.length % 3 == 0, "Always 3 elements make a cell");
-        Preconditions.checkArgument(rows < 10,
-                "This is using the DenseFormat which is memory bound and does not support row > 10");
-        Preconditions.checkArgument(columns < 10,
-                "This is using the DenseFormat which is memory bound and does not support columns > 10");
-
-        Matrix matrix = new DenseMatrix(rows, columns);
-
-        for (int i = 0; i < elements.length; i+=3) {
-            matrix.set(elements[i], elements[i + 1], elements[i + 2]);
-        }
-
-        return new MatrixBlock(startRow, startCol, new AdaptedCompRowMatrix(matrix));
-    }
-
     public int getStartRow() {
         return startRow;
     }
@@ -131,10 +138,6 @@ public class MatrixBlock implements Serializable {
 
     public void setStartCol(int startCol) {
         this.startCol = startCol;
-    }
-
-    public void setMatrix(AdaptedCompRowMatrix matrix) {
-        this.matrix = matrix;
     }
 
     @Override
