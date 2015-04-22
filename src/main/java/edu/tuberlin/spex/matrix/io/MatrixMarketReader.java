@@ -150,8 +150,8 @@ public class MatrixMarketReader {
 
         @Override
         public Tuple3<Integer, Integer, Double> map(Tuple3<Integer, Integer, Double> value) throws Exception {
-            value.f0 -= offset;
-            value.f1 -= offset;
+            value.f0 += offset;
+            value.f1 += offset;
             return value;
         }
     }
