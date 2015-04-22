@@ -201,4 +201,17 @@ public class MatrixBlockPartitionerTest {
         assertThat(partitioner.getKey(new Tuple3<>(3, 0, 2d)), is(3L));
 
     }
+
+    @Test
+    public void testBlockDimensions() throws Exception {
+        int rows = 231;
+        int columns = 261;
+        int blocks = 32;
+
+        MatrixBlockPartitioner partitioner = new MatrixBlockPartitioner(rows, columns, blocks);
+
+        List<MatrixBlockPartitioner.BlockDimensions> blockDimensionses = partitioner.computeRowSizes();
+
+
+    }
 }

@@ -1,116 +1,147 @@
 package edu.tuberlin.spex.matrix;
 
-import com.google.common.collect.Iterables;
+import com.google.common.base.Stopwatch;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Table;
+import com.google.common.collect.TreeBasedTable;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
 import edu.tuberlin.spex.experiments.ExperimentDatasets;
 import edu.tuberlin.spex.matrix.io.MatrixMarketReader;
-import edu.tuberlin.spex.matrix.kernel.NonTimingMatrixBlockVectorKernel;
+import edu.tuberlin.spex.matrix.kernel.TimingMatrixBlockVectorKernel;
 import edu.tuberlin.spex.matrix.mapper.AddMatrixElementBlockPartitionMapper;
-import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockReducer;
 import edu.tuberlin.spex.utils.VectorBlockHelper;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
-import org.apache.flink.api.common.functions.GroupReduceFunction;
+import org.apache.commons.compress.archivers.ArchiveException;
+import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
+import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.functions.ReduceFunction;
-import org.apache.flink.api.common.functions.RichMapFunction;
 import org.apache.flink.api.common.operators.Order;
 import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.operators.*;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple4;
-import org.apache.flink.configuration.Configuration;
-import org.apache.flink.util.Collector;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Collection;
-
-import static org.hamcrest.core.Is.is;
-import static org.junit.Assert.assertThat;
+import java.util.List;
+import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 22.04.2015.
- *
  */
 @RunWith(Parameterized.class)
 public class MatrixVectorComputationDatasetTest {
 
     private static final Logger LOG = LoggerFactory.getLogger(MatrixVectorComputationDatasetTest.class);
+    // Keep Track of global stats
+    static Table<ExperimentDatasets.Matrix, Integer, SummaryStatistics> stats;
+    static Table<ExperimentDatasets.Matrix, Integer, Long> runtime;
+    static int[] blocksizes = {1, 2, 4, 8, 16, 32};
+    private static ExecutionEnvironment env;
     @Parameterized.Parameter
     public ExperimentDatasets.Matrix testMatrix;
+    @Parameterized.Parameter(value = 1)
+    public int blocksize;
 
-    @Parameterized.Parameters(name = "{index}: Dataset {0}")
-    public static Collection<ExperimentDatasets.Matrix> data() {
-        return Arrays.asList(
-                //ExperimentDatasets.Matrix.lpi_box1
-                ExperimentDatasets.Matrix.values()
-        );
+    @Parameterized.Parameters(name = "{index}: Dataset {0} {1}")
+    public static List<Object[]> data() {
+
+        // sort the array
+        Arrays.sort(blocksizes);
+
+        // build the cross product of all test with a couple different blocksizes
+        List<Object[]> parameters = Lists.newArrayList();
+
+        for (ExperimentDatasets.Matrix matrix : ExperimentDatasets.Matrix.values()) {
+            for (int blocksize : blocksizes) {
+                parameters.add(new Object[]{matrix, blocksize});
+            }
+        }
+        return parameters;
     }
 
-    @Test
-    public void testRead() throws Exception {
+    @BeforeClass
+    public static void setup() throws Exception {
+        env = ExecutionEnvironment.getExecutionEnvironment();
+        stats = TreeBasedTable.create();
+        runtime = TreeBasedTable.create();
+    }
 
-        Path path = ExperimentDatasets.get(testMatrix);
+    @AfterClass
+    public static void tearDown() throws IOException, ArchiveException {
 
-        MatrixReaderInputFormat.MatrixInformation matrixInfo = MatrixReaderInputFormat.getMatrixInfo(path);
+        // print some stats
+        System.out.println("KernelTimes");
+        System.out.printf("%10s", "Dataset");
+        for (int blocksize : blocksizes) {
+            System.out.printf("\t%10d", blocksize);
+        }
+        System.out.println();
 
-        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-        env.setParallelism(1);
 
-        MatrixMarketReader matrixMarketReader = new MatrixMarketReader(env);
-
-        MapOperator<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>> matrixEntries =
-                matrixMarketReader.fromPath(path).withOffsetAdjust(-1).withMatrixInformation(matrixInfo).build();
-
-        // partition the results so that we can create matrix blocks
-        // add a field which indicates which matrix block a tuple should belong to
-        // we need this number later, that's why we add that to each tuple,
-        SortedGrouping<Tuple4<Integer, Integer, Double, Long>> matrixWithGroupID = matrixEntries
-                .map(new RichMapFunction<Tuple3<Integer, Integer, Double>, Tuple4<Integer, Integer, Double, Long>>() {
-
-                    MatrixBlockPartitioner matrixBlockPartitioner;
-
-                    @Override
-                    public void open(Configuration parameters) throws Exception {
-                        super.open(parameters);
-                        matrixBlockPartitioner = new MatrixBlockPartitioner(1, 1);
-                    }
-
-                    @Override
-                    public Tuple4<Integer, Integer, Double, Long> map(Tuple3<Integer, Integer, Double> input) throws Exception {
-                        return new Tuple4<>(input.f0, input.f1, input.f2, matrixBlockPartitioner.getKey(input));
-                    }
-                }).withForwardedFields("0->0; 1->1; 2->2")
-                .groupBy(3).sortGroup(0, Order.ASCENDING).sortGroup(1, Order.ASCENDING);//.sortGroup(1, Order.ASCENDING);
-
-        GroupReduceOperator<Tuple3<Integer, Integer, Double>, Long> counts = matrixEntries.reduceGroup(new GroupReduceFunction<Tuple3<Integer, Integer, Double>, Long>() {
-            @Override
-            public void reduce(Iterable<Tuple3<Integer, Integer, Double>> values, Collector<Long> out) throws Exception {
-                long count = 0;
-                for (Tuple3<Integer, Integer, Double> ignored : values) {
-                    count++;
+        for (ExperimentDatasets.Matrix matrix : stats.rowKeySet()) {
+            System.out.printf("%10s\t", matrix);
+            for (int blocksize : blocksizes) {
+                if (stats.contains(matrix, blocksize)) {
+                    SummaryStatistics summaryStatistics = stats.get(matrix, blocksize);
+                    System.out.printf("%10.0f\t", summaryStatistics.getSum());
+                } else {
+                    System.out.printf("%10s\t", "");
                 }
-                out.collect(count);
             }
-        });
+            System.out.println();
+        }
 
-        Long counted = Iterables.getOnlyElement(counts.collect());
+        System.out.println();
 
-        // print is here to ensure we have some output
-        counts.print();
+        System.out.println("Runtime");
 
-        env.execute();
+        // print some stats
+        System.out.printf("%10s", "Dataset");
+        for (int blocksize : blocksizes) {
+            System.out.printf("\t%10d", blocksize);
+        }
 
-        LOG.info(matrixInfo.toString());
+        System.out.println();
 
 
-        assertThat(counted, is(matrixInfo.getValues()));
+        for (ExperimentDatasets.Matrix matrix : runtime.rowKeySet()) {
+            System.out.printf("%10s\t", matrix);
+            for (int blocksize : blocksizes) {
+                if (runtime.contains(matrix, blocksize)) {
+                    Long runLength = runtime.get(matrix, blocksize);
+                    System.out.printf("%10d\t", runLength);
+                } else {
+                    System.out.printf("%10s\t", "");
+                }
+            }
+            System.out.println();
+        }
+
+        System.out.println();
+        System.out.println("MatrixInfo");
+
+        for (ExperimentDatasets.Matrix matrix : ExperimentDatasets.Matrix.values()) {
+            System.out.printf("%10s\t", matrix);
+            Path path = ExperimentDatasets.get(matrix);
+            final MatrixReaderInputFormat.MatrixInformation matrixInfo = MatrixReaderInputFormat.getMatrixInfo(path);
+
+            System.out.printf("%5d\t%5d\t%10d\n", matrixInfo.getN(), matrixInfo.getM(), matrixInfo.getValues());
+
+        }
+
+
     }
 
     @Test
@@ -120,15 +151,12 @@ public class MatrixVectorComputationDatasetTest {
 
         final MatrixReaderInputFormat.MatrixInformation matrixInfo = MatrixReaderInputFormat.getMatrixInfo(path);
 
-        ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-        env.setParallelism(1);
-
         MatrixMarketReader matrixMarketReader = new MatrixMarketReader(env);
 
         MapOperator<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>> matrixEntries =
                 matrixMarketReader.fromPath(path).withOffsetAdjust(-1).withMatrixInformation(matrixInfo).build();
 
-        final int blocks = 2;
+        final int blocks = blocksize;
 
         final DataSource<VectorBlock> denseVectorDataSource = env.fromCollection(VectorBlockHelper.createBlocks(matrixInfo.getN(), matrixInfo.getM(), blocks, 1d));
 
@@ -148,7 +176,7 @@ public class MatrixVectorComputationDatasetTest {
         // This bit multiplies
         final ReduceOperator<VectorBlock> multiplicationResuls = matrixBlocks.joinWithTiny(denseVectorDataSource).where("startCol").equalTo("startRow")
                 // here we compute the Matrix * Vector
-                .map(new NonTimingMatrixBlockVectorKernel())
+                .map(new TimingMatrixBlockVectorKernel())
                 .returns(VectorBlock.class)
                         // we need to group the values together
                 .groupBy("startRow").reduce(new ReduceFunction<VectorBlock>() {
@@ -161,10 +189,19 @@ public class MatrixVectorComputationDatasetTest {
 
         multiplicationResuls.print();
 
-        env.execute();
+        Stopwatch stopwatch = Stopwatch.createStarted();
+        JobExecutionResult execute = env.execute();
+        stopwatch.stop();
 
 
+        TreeMap<Integer, Integer> histogram = execute.getAccumulatorResult(TimingMatrixBlockVectorKernel.TIMINGS_ACCUMULATOR);
+        SummaryStatistics summaryStatistics = new SummaryStatistics();
+        for (Integer integer : histogram.keySet()) {
+            summaryStatistics.addValue(integer);
+        }
 
+        stats.put(testMatrix, blocks, summaryStatistics);
+        runtime.put(testMatrix, blocks, stopwatch.elapsed(TimeUnit.MILLISECONDS));
     }
 
 

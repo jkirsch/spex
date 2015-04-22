@@ -48,7 +48,7 @@ public class ExperimentDatasets {
 
         Path path = Paths.get(targetDirectory, filename);
         if(Files.exists(path)) {
-            LOG.info("Using cached copy for {}", location);
+            LOG.debug("Using cached copy for {}", location);
         } else {
             download(location);
         }
