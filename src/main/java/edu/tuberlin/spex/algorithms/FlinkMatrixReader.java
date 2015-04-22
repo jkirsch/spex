@@ -102,7 +102,7 @@ public class FlinkMatrixReader implements Serializable {
             TimingResult timingResult = flinkMatrixReader.executePageRank(env, alpha, blocksize, input, n, 100);
             timings.put(blocksize, timingResult.stopwatch);
 
-            // Enable the next line, if you are interested in the distributuion of the blocks
+            // Enable the next line, if you are interested in the distribution of the blocks
             //counts.put(blocksize, flinkMatrixReader.getTheNumberOfSetBlocks(env, blocksize, input, n));
         }
 
@@ -340,7 +340,7 @@ public class FlinkMatrixReader implements Serializable {
 
 
         GroupReduceOperator<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> matrixBlocks = matrixWithGroupID.
-                reduceGroup(new MatrixBlockReducer(adjustedN, blocks, true, transpose)).withBroadcastSet(colSumsDataSet, "rowSums").name("Build Matrix Blocks");
+                reduceGroup(new MatrixBlockReducer(adjustedN, adjustedN, blocks, true, transpose)).withBroadcastSet(colSumsDataSet, "rowSums").name("Build Matrix Blocks");
 
 
         final IterativeDataSet<VectorBlock> iterate = denseVectorDataSource.iterate(iteration);
