@@ -1,18 +1,19 @@
 package edu.tuberlin.spex.utils;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Lists;
+import com.google.common.collect.*;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
 import no.uib.cipr.matrix.DenseVector;
 import org.apache.flink.api.java.tuple.Tuple2;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Date: 18.02.2015
  * Time: 23:05
- *
  */
 public class VectorBlockHelper {
 
@@ -32,6 +33,19 @@ public class VectorBlockHelper {
                         identical);
             }
         });
+
+    }
+
+    public static List<Tuple2<Integer, Double>> createSingleVector(final int rows, final double init) {
+
+
+        List<Tuple2<Integer, Double>> list = Lists.newArrayListWithExpectedSize(rows);
+
+        for (int i = 0; i < rows; i++) {
+            list.add(new Tuple2<>(i, init));
+        }
+
+        return list;
 
     }
 
