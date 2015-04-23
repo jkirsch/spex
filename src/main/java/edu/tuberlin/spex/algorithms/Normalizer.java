@@ -23,7 +23,6 @@ import java.util.Scanner;
 /**
  * Date: 22.01.2015
  * Time: 21:12
- *
  */
 public class Normalizer {
 
@@ -58,7 +57,7 @@ public class Normalizer {
                 for (Cell cell : cells) {
                     // build transpose
                     //cell.setValue(cell.getValue() / (double) cells.size());
-                    out.collect(new Cell(cell.getColumn(), cell.getRow(), cell.getValue() / (double) cells.size() ));
+                    out.collect(new Cell(cell.getColumn(), cell.getRow(), cell.getValue() / (double) cells.size()));
                 }
             }
         });
@@ -76,7 +75,7 @@ public class Normalizer {
                     found = true;
                 }
 
-                if(!found) {
+                if (!found) {
                     Entry entry = Iterables.getOnlyElement(entries);
                     for (int i = 1; i <= numberOfRows; i++) {
                         collector.collect(new Cell(i, entry.getIndex(), 1 / (double) numberOfRows));

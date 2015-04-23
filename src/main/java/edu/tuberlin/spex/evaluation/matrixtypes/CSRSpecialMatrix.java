@@ -36,7 +36,7 @@ public class CSRSpecialMatrix extends BaseMatrix {
         for (int row = 0; row < matrix.length; row++) {
             for (int column = 0; column < matrix[row].length; column++) {
                 double val = matrix[row][column];
-                if(Doubles.compare(val, 0) != 0) {
+                if (Doubles.compare(val, 0) != 0) {
                     // we need this entry
                     rnz.get(row).add(column);
                     values.add(val);
@@ -70,8 +70,8 @@ public class CSRSpecialMatrix extends BaseMatrix {
         for (int i = 0; i < nz.length; ++i)
             nnz += nz[i].length;
 
-        int rowPointer[] = new int[numRows + 1];
-        int columnIndex[] = new int[nnz];
+        int[] rowPointer = new int[numRows + 1];
+        int[] columnIndex = new int[nnz];
 
         data = DoubleBuffer.wrap(new double[nnz]);
 

@@ -37,8 +37,8 @@ public class Datasets {
         String filename = Joiner.on(".").join(name, extension);
 
         Path path = Paths.get(targetDirectory, filename);
-        if(Files.exists(path)) {
-            LOG.info("Using cached copy for {}", location);
+        if (Files.exists(path)) {
+            LOG.debug("Using cached copy for {}", location);
         } else {
             download(filename, location);
         }

@@ -57,7 +57,7 @@ public class SimpleEvaluate {
 
         for (int i = 1; i <= thedata.length; i++) {
 
-            if(thedata.length % i != 0) continue;
+            if (thedata.length % i != 0) continue;
 
             List<double[][]> blocks = BlockSlicer.createBlocks(thedata, i);
 

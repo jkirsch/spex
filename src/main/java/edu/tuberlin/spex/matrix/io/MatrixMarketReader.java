@@ -81,7 +81,7 @@ public class MatrixMarketReader {
 
         FlatMapOperator<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>> symmetry = null;
 
-        if(info.getMatrixInfo().isSymmetric()) {
+        if (info.getMatrixInfo().isSymmetric()) {
             symmetry = filtered.flatMap(new SymmetryMapper());
         }
 
@@ -119,7 +119,7 @@ public class MatrixMarketReader {
         public void flatMap(Tuple3<Integer, Integer, Double> value, Collector<Tuple3<Integer, Integer, Double>> out) throws Exception {
 
             // add the symmetry values if we are not on the diagonal
-            if(!Objects.equals(value.f0, value.f1)) {
+            if (!Objects.equals(value.f0, value.f1)) {
                 out.collect(new Tuple3<>(value.f1, value.f0, value.f2));
             }
 

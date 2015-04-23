@@ -6,12 +6,10 @@ import java.io.PushbackInputStream;
 import java.util.zip.GZIPInputStream;
 
 /**
- *
  * Compression Helper tools
- *
+ * <p/>
  * Date: 30.09.2014
  * Time: 21:03
- *
  */
 public class CompressionHelper {
 
@@ -27,7 +25,7 @@ public class CompressionHelper {
         PushbackInputStream pb = new PushbackInputStream(input, 2); //we need a pushbackstream to look ahead
         byte[] signature = new byte[2];
         int read = pb.read(signature);//read the signature
-        if(read < 2) {
+        if (read < 2) {
             throw new IllegalStateException("Could not determine the type of file");
         }
         pb.unread(signature); //push back the signature to the stream

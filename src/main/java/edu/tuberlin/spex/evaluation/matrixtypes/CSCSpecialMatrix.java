@@ -45,7 +45,7 @@ public class CSCSpecialMatrix extends BaseMatrix {
         for (int column = 0; column < numColumns; column++) {
             for (int row = 0; row < numRows; row++) {
                 double val = matrix[row][column];
-                if(Doubles.compare(val, 0) != 0) {
+                if (Doubles.compare(val, 0) != 0) {
                     // we need this entry
                     cnz.get(column).add(row);
                     values.add(val);

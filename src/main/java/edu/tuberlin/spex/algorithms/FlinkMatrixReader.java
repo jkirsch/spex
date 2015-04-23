@@ -280,14 +280,14 @@ public class FlinkMatrixReader implements Serializable {
                     Tuple2<Integer, Integer> entry = peekingIterator.next();
                     //bitSet.set(entry.f0);
 
-                    if(entry.f0 < last) {
+                    if (entry.f0 < last) {
                         throw new IllegalStateException("SORT?");
                     }
                     last = entry.f0;
 
                     // new block
                     int blockSize = adjustedN / blocks;
-                    if(entry.f0 >= danglingNodeInformation.startRow + blockSize) {
+                    if (entry.f0 >= danglingNodeInformation.startRow + blockSize) {
                         // new block - maybe many
 
 
@@ -301,7 +301,7 @@ public class FlinkMatrixReader implements Serializable {
                     }
 
                     //System.out.println("HELLO " + danglingNodeInformation.startRow + " -- " + entry);
-                    if(entry.f0 - danglingNodeInformation.getStartRow() < 0 ) {
+                    if (entry.f0 - danglingNodeInformation.getStartRow() < 0 ) {
                         System.out.println();
                     }
                     danglingNodeInformation.set(entry.f0);
@@ -385,7 +385,7 @@ public class FlinkMatrixReader implements Serializable {
                 }*/
 
 /*                for (int i = vector.getStartRow(); i < vector.getStartRow() + vector.size(); i++) {
-                     if(complete.get(i)) {
+                     if (complete.get(i)) {
                          sum += vector.get(i - vector.getStartRow());
                      }
                 }*/

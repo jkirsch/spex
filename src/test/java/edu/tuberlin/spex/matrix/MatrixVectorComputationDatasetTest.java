@@ -70,13 +70,14 @@ public class MatrixVectorComputationDatasetTest {
                 parameters.add(new Object[]{matrix, blocksize});
             }
         }
+
         return parameters;
     }
 
     @BeforeClass
     public static void setup() throws Exception {
 
-        // increase the #of netwiork buffers
+        // increase the #of network buffers
         Configuration conf = new Configuration();
         conf.setInteger(ConfigConstants.TASK_MANAGER_NETWORK_NUM_BUFFERS_KEY, 4096);
 

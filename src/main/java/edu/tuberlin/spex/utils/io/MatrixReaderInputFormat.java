@@ -92,7 +92,7 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
                     %Matrix generated automatically on Sun Feb 22 17:02:04 CET 2015
                     325729     325729             1497134
                     */
-                    if(matrixInfo == null) {
+                    if (matrixInfo == null) {
                         matrixInfo = readMatrixInfo(line);
                         return true;
                     }

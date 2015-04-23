@@ -43,7 +43,7 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, 
         super.open(parameters);
 
         // generate Vector
-        if(rowNormalize) {
+        if (rowNormalize) {
             List<Tuple2<Integer, Double>> aggregatedSums = getRuntimeContext().getBroadcastVariable("rowSums");
 
             rowSums = new DenseVector(rows);
@@ -105,7 +105,6 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, 
         MatrixBlock matrixBlock = new MatrixBlock(blockDimensions.getRowStart(), blockDimensions.getColStart(), matrix);
 
 
-
         // get the row offset
         // get the column offset
  /*       while (peekingIterator.hasNext()) {
@@ -117,7 +116,7 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, 
                         value.f2 / rowSums.get(isTransposed ? value.f1 : value.f0)
                         : value.f2;
 
-                if(matrix.get(value.f0 - blockDimensions.getRowStart(), value.f1 - blockDimensions.getColStart()) > 0) {
+                if (matrix.get(value.f0 - blockDimensions.getRowStart(), value.f1 - blockDimensions.getColStart()) > 0) {
                     System.err.println("Setting existing value " + value.toString());
                 }
 

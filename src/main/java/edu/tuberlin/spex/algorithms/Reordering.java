@@ -20,6 +20,19 @@ import java.util.List;
  */
 public class Reordering {
 
+    private static final Ordering<Index> vectorEntryOrdering = Ordering.natural().onResultOf(new Function<Index, Comparable>() {
+        @Override
+        public Comparable apply(Index input) {
+            return input.getValue();
+        }
+    }).reverse();
+    private static final Function<VectorEntry, Index> function = new Function<VectorEntry, Index>() {
+        @Override
+        public Index apply(VectorEntry input) {
+            return new Index(input.index(), input.get());
+        }
+    };
+
     public static Matrix orderByRowSum(Matrix matrix) {
 
         Vector IDENTITY_VECTOR = VectorHelper.ones(matrix.numColumns());
@@ -39,7 +52,7 @@ public class Reordering {
         for (Index index : sortedByRow) {
             // element[counter] should now be at new Index
             int newIndex = index.getIndex();
-            if(counter != positions[newIndex]) {
+            if (counter != positions[newIndex]) {
                 // reorder in place by swapping
                 SparseVector original = rowMatrix.getRow(counter);
                 SparseVector newRow = rowMatrix.getRow(positions[newIndex]);
@@ -76,7 +89,7 @@ public class Reordering {
         int counter = 0;
         for (Index index : sortedByRow) {
             int newIndex = index.getIndex();
-            if(counter != positions[newIndex]) {
+            if (counter != positions[newIndex]) {
                 // reorder in place by swapping
                 SparseVector original = columnMatrix.getColumn(counter);
                 SparseVector newColumn = columnMatrix.getColumn(positions[newIndex]);
@@ -94,23 +107,6 @@ public class Reordering {
 
         return columnMatrix;
     }
-
-
-
-    private static final Ordering<Index> vectorEntryOrdering = Ordering.natural().onResultOf(new Function<Index, Comparable>() {
-        @Override
-        public Comparable apply(Index input) {
-            return input.getValue();
-        }
-    }).reverse();
-
-    private static final Function<VectorEntry, Index> function = new Function<VectorEntry, Index>() {
-        @Override
-        public Index apply(VectorEntry input) {
-            return new Index(input.index(), input.get());
-        }
-    };
-
 
     private static class Index {
         final int index;

@@ -9,7 +9,6 @@ import java.util.List;
 
 /**
  * 24.03.2015.
- *
  */
 public class BlockSlicer {
 
@@ -73,7 +72,7 @@ public class BlockSlicer {
             c += BaseMatrix.getNNZ(doubles);
         }
 
-        if(c != BaseMatrix.getNNZ(matrix)) {
+        if (c != BaseMatrix.getNNZ(matrix)) {
             System.out.println(Arrays.deepToString(matrix));
             for (double[][] doubles : blockMatrix) {
                 System.out.println(Arrays.deepToString(doubles));

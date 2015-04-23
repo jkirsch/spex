@@ -226,7 +226,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             Tuple3<Integer, Integer, Double> value = values.next();
             data.add(value.f2);
 
-            if(value.f0 > lastRow && lastRow > -1) {
+            if (value.f0 > lastRow && lastRow > -1) {
                 Preconditions.checkArgument(lastRow < value.f0, "We need a sorted list");
                 // flush last row
                nnz[lastRow] = ArrayUtils.toPrimitive(colIndices.toArray(new Integer[colIndices.size()]));
@@ -252,8 +252,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         for (int i = 0; i < nz.length; ++i)
             nnz += nz[i].length;
 
-        int rowPointer[] = new int[numRows + 1];
-        int columnIndex[] = new int[nnz];
+        int[] rowPointer = new int[numRows + 1];
+        int[] columnIndex = new int[nnz];
         data = DoubleBuffer.wrap(new double[nnz]);
 
         if (nz.length != numRows)
@@ -282,8 +282,8 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         for (int i = 0; i < nz.length; ++i)
             nnz += nz[i].length;
 
-        int rowPointer[] = new int[numRows + 1];
-        int columnIndex[] = new int[nnz];
+        int[] rowPointer = new int[numRows + 1];
+        int[] columnIndex = new int[nnz];
         this.data = DoubleBuffer.wrap(data);
 
         if (nz.length != numRows)
@@ -585,7 +585,7 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         out.writeInt(rowPointer.limit());
         out.writeInt(data.capacity());
 
-        if(byteBuffer != null) {
+        if (byteBuffer != null) {
             out.write(byteBuffer.array());
         } else {
 

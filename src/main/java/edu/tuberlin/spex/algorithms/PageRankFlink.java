@@ -17,7 +17,6 @@ import java.util.Scanner;
 /**
  * Date: 21.01.2015
  * Time: 21:51
- *
  */
 public class PageRankFlink {
 
@@ -52,7 +51,7 @@ public class PageRankFlink {
                 for (Cell cell : cells) {
                     // build transpose
                     //cell.setValue(cell.getValue() / (double) cells.size());
-                    out.collect(new Cell(cell.getColumn(), cell.getRow(), cell.getValue() / (double) cells.size() ));
+                    out.collect(new Cell(cell.getColumn(), cell.getRow(), cell.getValue() / (double) cells.size()));
                 }
             }
         });
@@ -70,7 +69,7 @@ public class PageRankFlink {
                     found = true;
                 }
 
-                if(!found) {
+                if (!found) {
                     Entry entry = Iterables.getOnlyElement(entries);
                     for (int i = 1; i <= numberOfRows; i++) {
                         collector.collect(new Cell(i, entry.getIndex(), 1 / (double) numberOfRows));
@@ -104,7 +103,7 @@ public class PageRankFlink {
                         //      fix cell value to 1 / numberOfRows
                         double value = c / numberOfRows * entry.getValue();
                         for (int i = 1; i <= numberOfRows; i++) {
-                           // collector.collect(new Entry(i, value));
+                            // collector.collect(new Entry(i, value));
                             // Problematic LINE!!!!!!!
                         }
                     }

@@ -26,7 +26,6 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * 21.04.2015.
- *
  */
 public class ExperimentDatasets {
 
@@ -40,14 +39,14 @@ public class ExperimentDatasets {
         String name = com.google.common.io.Files.getNameWithoutExtension(location);
         String extension = com.google.common.io.Files.getFileExtension(location);
 
-        if("gz".equals(extension)) {
-            name =  com.google.common.io.Files.getNameWithoutExtension(name);
+        if ("gz".equals(extension)) {
+            name = com.google.common.io.Files.getNameWithoutExtension(name);
         }
 
         String filename = Joiner.on(".").join(name, "mtx");
 
         Path path = Paths.get(targetDirectory, filename);
-        if(Files.exists(path)) {
+        if (Files.exists(path)) {
             LOG.debug("Using cached copy for {}", location);
         } else {
             download(location);
@@ -74,7 +73,7 @@ public class ExperimentDatasets {
 
         TarArchiveInputStream archiveInputStream = (TarArchiveInputStream) new ArchiveStreamFactory().createArchiveInputStream("tar", input);
         TarArchiveEntry entry;
-        while ((entry = (TarArchiveEntry)archiveInputStream.getNextEntry()) != null) {
+        while ((entry = (TarArchiveEntry) archiveInputStream.getNextEntry()) != null) {
 
             String filename = FilenameUtils.getName(entry.getName());
             if (FilenameUtils.getExtension(filename).equals("mtx")) {
@@ -95,8 +94,8 @@ public class ExperimentDatasets {
         LOG.info("Downloaded in {} with {} in {} Kb/s",
                 stopwatch.toString(),
                 FileUtils.byteCountToDisplaySize(countingInputStream.getCount()),
-                elapsedSeconds>0?(countingInputStream.getCount() / 1024 / elapsedSeconds)
-                        :(countingInputStream.getCount() / 1024 / stopwatch.elapsed(TimeUnit.MILLISECONDS)) * 1000);
+                elapsedSeconds > 0 ? (countingInputStream.getCount() / 1024 / elapsedSeconds)
+                        : (countingInputStream.getCount() / 1024 / stopwatch.elapsed(TimeUnit.MILLISECONDS)) * 1000);
 
         archiveInputStream.close();
     }

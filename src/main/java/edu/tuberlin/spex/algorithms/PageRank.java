@@ -25,8 +25,36 @@ public class PageRank {
     final double c;
 
     public PageRank(double c) {
-        Preconditions.checkArgument(Range.open(0d, 1d).contains(c),"This implementation does only work for damping (0,1)");
+        Preconditions.checkArgument(Range.open(0d, 1d).contains(c), "This implementation does only work for damping (0,1)");
         this.c = c;
+    }
+
+    public static Normalized normalizeRowWise(Matrix input) {
+        Vector rowSummer = VectorHelper.ones(input.numRows());
+        CompDiagMatrix diagMatrix = new CompDiagMatrix(input.numRows(), input.numColumns());
+
+        Vector rowSums = input.mult(rowSummer, rowSummer.copy());
+        //Vector colSums = input.transMult(rowSummer, rowSummer.copy());
+
+        Vector dangling = new SparseVector(rowSummer.size());
+
+        for (VectorEntry rowSum : rowSums) {
+            double value = rowSum.get();
+            int index = rowSum.index();
+            if (value > 0) {
+                diagMatrix.set(index, index, 1. / value);
+            } else {
+                diagMatrix.set(index, index, 1);
+                dangling.set(index, 1);
+            }
+        }
+
+
+        // divide by column sum
+        // To do column-wise scaling, use
+        // diag(b) * B
+        return new Normalized(diagMatrix.mult(input, input.copy()), dangling);
+
     }
 
     public Vector calc(Normalized normalized) {
@@ -60,7 +88,7 @@ public class PageRank {
             Vector rand = new DenseVector(p0.size());
             for (VectorEntry vectorEntry : dangling) {
                 int index = vectorEntry.index();
-                rand.set(index, p_k.get(index) );
+                rand.set(index, p_k.get(index));
             }
             double added = c * rand.norm(Vector.Norm.One) / (double) p0.size();
             Vector y = VectorHelper.identical(p0.size(), added).add(p0);
@@ -77,34 +105,6 @@ public class PageRank {
         LOG.info("{} Converged after {} : {} in {}", String.format("%-17s", shortenedClassName), counter, p_k1.norm(Vector.Norm.One), stopwatch);
 
         return p_k1;
-    }
-
-    public static Normalized normalizeRowWise(Matrix input) {
-        Vector rowSummer = VectorHelper.ones(input.numRows());
-        CompDiagMatrix diagMatrix = new CompDiagMatrix(input.numRows(), input.numColumns());
-
-        Vector rowSums = input.mult(rowSummer, rowSummer.copy());
-        //Vector colSums = input.transMult(rowSummer, rowSummer.copy());
-
-        Vector dangling = new SparseVector(rowSummer.size());
-
-        for (VectorEntry rowSum : rowSums) {
-            double value = rowSum.get();
-            int index = rowSum.index();
-            if(value > 0) {
-                diagMatrix.set(index, index, 1. / value);
-            } else {
-                diagMatrix.set(index, index, 1);
-                dangling.set(index, 1);
-            }
-        }
-
-
-        // divide by column sum
-        // To do column-wise scaling, use
-        // diag(b) * B
-        return new Normalized(diagMatrix.mult(input, input.copy()), dangling);
-
     }
 
     public static class Normalized {

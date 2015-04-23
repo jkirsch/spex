@@ -18,10 +18,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- *
  * Taken and adapted from
  * https://github.com/project-flink/flink-perf/blob/master/flink-jobs/src/main/java/com/github/projectflink/utils/IterationParser.java
- *
+ * <p/>
  * Little stupid util to get the iteration times
  */
 public class IterationParser {
@@ -32,14 +31,8 @@ public class IterationParser {
 
     private static final Pattern startOfSomething = Pattern.compile("org\\.apache\\.flink\\.runtime\\.executiongraph\\.ExecutionGraph  - Deploying [^\\(]+ (.+) \\(attempt .*\\) to");
     private static final Pattern endOfSomething = Pattern.compile("org\\.apache\\.flink\\.runtime\\.taskmanager\\.Task  - (.+) switched to FINISHED");
-
-    enum States {
-        START_ITERATION,
-        NONE,
-    }
-
-
     private static String fileName = "log/flink.log";
+    private static States state = States.NONE;
 
     public static void mainReadDelta(String[] args) throws Exception {
         BufferedReader br = null;
@@ -52,18 +45,18 @@ public class IterationParser {
 
             Date iterationStart = null;
             Date iterationEnd;
-            //	long iterationStart = 0;
+            // long iterationStart = 0;
 
             while ((line = br.readLine()) != null) {
                 // System.err.println("line = "+line);
                 // find first iteration start
                 if (iterationStart == null && line.contains("starting iteration [" + iteration + "]")) {
-                    //	System.err.println("found start");
+                    // System.err.println("found start");
                     iterationStart = getDate(line);
                 }
                 // find last iteration end
                 if (line.contains("done in iteration [" + iteration + "]")) {
-                    //	System.err.println("found end");
+                    // System.err.println("found end");
                     iterationEnd = getDate(line, iterationStart);
                     long duration = iterationEnd.getTime() - iterationStart.getTime();
                     System.err.println(iteration + "," + duration);
@@ -79,17 +72,19 @@ public class IterationParser {
         }
     }
 
-    private static States state = States.NONE;
-
-
-	// read bulk
-	public static void main(String[] args) throws Exception {
+    /**
+     * read bulk
+     *
+     * @param args
+     * @throws Exception
+     */
+    public static void main(String[] args) throws Exception {
         try {
             int iteration = 1;
 
             Date iterationStart = null;
             Date iterationEnd;
-            //	long iterationStart = 0;
+            // long iterationStart = 0;
 
             int global = 0;
             int maxIt = 0;
@@ -131,7 +126,7 @@ public class IterationParser {
 
                 // find first iteration start
                 if (iterationStart == null && line.contains("starting iteration [" + iteration + "]") && state == States.NONE) {
-                    //	System.err.println("found start");
+                    // System.err.println("found start");
                     iterationStart = getDate(line);
                     state = States.START_ITERATION;
                 }
@@ -143,7 +138,7 @@ public class IterationParser {
                         line = lines.get(pos);
                     }
 
-                    //	System.err.println("found end");
+                    // System.err.println("found end");
                     iterationEnd = getDate(line, iterationStart);
                     long duration = iterationEnd.getTime() - iterationStart.getTime();
                     //System.err.println(iteration+" , "+ duration);
@@ -189,7 +184,7 @@ public class IterationParser {
                 }
 
                /*  Matcher startOf = startOfSomething.matcher(line);
-               if(startOf.find()) {
+               if (startOf.find()) {
                     // we have TIC or TOC
                     String identifier = startOf.group(1);
                     long timeStamp = getDate(line).getTime();
@@ -198,7 +193,7 @@ public class IterationParser {
 
                 Matcher endOf = endOfSomething.matcher(line);
 
-                if(endOf.find()) {
+                if (endOf.find()) {
                     // we have TIC or TOC
                     String identifier = endOf.group(1);
                     long timeStamp = getDate(line).getTime();
@@ -224,18 +219,18 @@ public class IterationParser {
             }
 
 
-            if(parsed.size() < global) global--;
+            if (parsed.size() < global) global--;
 
             for (String name : names) {
                 System.err.printf("%30s\t", name);
                 for (int pos = 0; pos < global; pos++) {
-                    if(annotations.size() > pos) {
-                        if(annotations.get(pos).containsKey(name)) {
+                    if (annotations.size() > pos) {
+                        if (annotations.get(pos).containsKey(name)) {
                             Tuple2<Long, Long> timing = annotations.get(pos).get(name);
-                            if(timing.f0 == null || timing.f1 == null) {
+                            if (timing.f0 == null || timing.f1 == null) {
                                 System.err.print("\t");
                             } else {
-                                System.err.printf("%6d",timing.f1 - timing.f0);
+                                System.err.printf("%6d", timing.f1 - timing.f0);
                             }
                         }
                     } else {
@@ -250,10 +245,10 @@ public class IterationParser {
                 System.err.printf("%30d\t", i + 1);
                 for (int pos = 0; pos < global; pos++) {
                     if (parsed.size() > pos && parsed.get(pos).size() > i) {
-                        System.err.printf("%6d",parsed.get(pos).get(i));
+                        System.err.printf("%6d", parsed.get(pos).get(i));
                     }
                     // last ?
-                    if(pos < global-1) {
+                    if (pos < global - 1) {
                         System.err.print("\t");
                     }
 
@@ -301,10 +296,10 @@ public class IterationParser {
         return sdf.parse(sp[0]);
     }
 
-	private static Date getDate(String line, Date iterationStart) throws ParseException {
+    private static Date getDate(String line, Date iterationStart) throws ParseException {
         Date parse = getDate(line);
         // do we have a roundtrip ?
-        if(parse.getTime() < iterationStart.getTime()) {
+        if (parse.getTime() < iterationStart.getTime()) {
             // add a day to parse
             Calendar c = Calendar.getInstance();
             c.setTime(parse);
@@ -312,5 +307,10 @@ public class IterationParser {
             parse = c.getTime();
         }
         return parse;
-	}
+    }
+
+    enum States {
+        START_ITERATION,
+        NONE,
+    }
 }
