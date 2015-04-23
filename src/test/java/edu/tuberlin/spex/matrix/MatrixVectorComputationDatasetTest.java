@@ -22,6 +22,8 @@ import org.apache.flink.api.java.ExecutionEnvironment;
 import org.apache.flink.api.java.operators.*;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.api.java.tuple.Tuple4;
+import org.apache.flink.configuration.ConfigConstants;
+import org.apache.flink.configuration.Configuration;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -73,7 +75,13 @@ public class MatrixVectorComputationDatasetTest {
 
     @BeforeClass
     public static void setup() throws Exception {
-        env = ExecutionEnvironment.getExecutionEnvironment();
+
+        // increase the #of netwiork buffers
+        Configuration conf = new Configuration();
+        conf.setInteger(ConfigConstants.TASK_MANAGER_NETWORK_NUM_BUFFERS_KEY, 4096);
+
+        env = ExecutionEnvironment.createLocalEnvironment(conf);
+
         stats = TreeBasedTable.create();
         runtime = TreeBasedTable.create();
     }
@@ -130,14 +138,16 @@ public class MatrixVectorComputationDatasetTest {
         }
 
         System.out.println();
+
         System.out.println("MatrixInfo");
+        System.out.printf("%10s\t%6s\t%6s\t%10s\n", "Dataset","rows","cols","entries");
 
         for (ExperimentDatasets.Matrix matrix : ExperimentDatasets.Matrix.values()) {
             System.out.printf("%10s\t", matrix);
             Path path = ExperimentDatasets.get(matrix);
             final MatrixReaderInputFormat.MatrixInformation matrixInfo = MatrixReaderInputFormat.getMatrixInfo(path);
 
-            System.out.printf("%5d\t%5d\t%10d\n", matrixInfo.getN(), matrixInfo.getM(), matrixInfo.getValues());
+            System.out.printf("%6d\t%6d\t%10d\n", matrixInfo.getN(), matrixInfo.getM(), matrixInfo.getValues());
 
         }
 
