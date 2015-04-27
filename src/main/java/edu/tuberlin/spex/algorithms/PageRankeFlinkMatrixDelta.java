@@ -3,8 +3,9 @@ package edu.tuberlin.spex.algorithms;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
 import edu.tuberlin.spex.matrix.kernel.NonTimingMatrixBlockVectorKernel;
+import edu.tuberlin.spex.matrix.partition.CreateMatrixBlockFromSortedEntriesReducer;
+import edu.tuberlin.spex.matrix.partition.CreateMatrixBlockFromSortedEntriesReducer.MatrixType;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
-import edu.tuberlin.spex.matrix.partition.MatrixBlockReducer;
 import edu.tuberlin.spex.utils.VectorBlockHelper;
 import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.common.functions.MapFunction;
@@ -75,7 +76,7 @@ public class PageRankeFlinkMatrixDelta {
 
 
         GroupReduceOperator<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> matrixBlocks = tuple3UnsortedGrouping.
-                reduceGroup(new MatrixBlockReducer(adjustedN, adjustedN, blocks, true, transpose)).withBroadcastSet(colSumsDataSet, "rowSums").name("Build Matrix Blocks");
+                reduceGroup(new CreateMatrixBlockFromSortedEntriesReducer(adjustedN, adjustedN, blocks, true, transpose, MatrixType.CompRowMatrix)).withBroadcastSet(colSumsDataSet, "rowSums").name("Build Matrix Blocks");
 
 
         DataSource<Tuple2<Integer, VectorBlock>> denseVectorDataSource = env.fromCollection(VectorBlockHelper.createTupleBlocks(adjustedN, blocks, 1 / (double) n));

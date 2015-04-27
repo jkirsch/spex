@@ -12,8 +12,9 @@ import edu.tuberlin.spex.matrix.adapted.DanglingNodeInformation;
 import edu.tuberlin.spex.matrix.adapted.DanglingNodeInformationBitSet;
 import edu.tuberlin.spex.matrix.adapted.EWAHCompressedBitmapHolder;
 import edu.tuberlin.spex.matrix.kernel.NonTimingMatrixBlockVectorKernel;
+import edu.tuberlin.spex.matrix.partition.CreateMatrixBlockFromSortedEntriesReducer;
+import edu.tuberlin.spex.matrix.partition.CreateMatrixBlockFromSortedEntriesReducer.MatrixType;
 import edu.tuberlin.spex.matrix.partition.MatrixBlockPartitioner;
-import edu.tuberlin.spex.matrix.partition.MatrixBlockReducer;
 import edu.tuberlin.spex.matrix.serializer.SerializerRegistry;
 import edu.tuberlin.spex.utils.ParallelVectorIterator;
 import edu.tuberlin.spex.utils.Utils;
@@ -340,7 +341,7 @@ public class FlinkMatrixReader implements Serializable {
 
 
         GroupReduceOperator<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> matrixBlocks = matrixWithGroupID.
-                reduceGroup(new MatrixBlockReducer(adjustedN, adjustedN, blocks, true, transpose)).withBroadcastSet(colSumsDataSet, "rowSums").name("Build Matrix Blocks");
+                reduceGroup(new CreateMatrixBlockFromSortedEntriesReducer(adjustedN, adjustedN, blocks, true, transpose, MatrixType.CompRowMatrix)).withBroadcastSet(colSumsDataSet, "rowSums").name("Build Matrix Blocks");
 
 
         final IterativeDataSet<VectorBlock> iterate = denseVectorDataSource.iterate(iteration);
@@ -479,6 +480,11 @@ public class FlinkMatrixReader implements Serializable {
         result.output(new LocalCollectionOutputFormat<>(resultCollector));
 
         Stopwatch stopwatch = Stopwatch.createStarted();
+
+
+        String executionPlan = env.getExecutionPlan();
+
+
         JobExecutionResult execute = env.execute("Pagerank");
 
 

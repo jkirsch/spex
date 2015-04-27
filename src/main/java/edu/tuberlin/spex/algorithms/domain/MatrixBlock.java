@@ -2,10 +2,7 @@ package edu.tuberlin.spex.algorithms.domain;
 
 import com.google.common.base.Preconditions;
 import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
-import no.uib.cipr.matrix.DenseMatrix;
-import no.uib.cipr.matrix.DenseVector;
-import no.uib.cipr.matrix.Matrix;
-import no.uib.cipr.matrix.Vector;
+import no.uib.cipr.matrix.*;
 
 import java.io.Serializable;
 
@@ -19,7 +16,7 @@ public class MatrixBlock implements Serializable {
     public int startRow;
     public int startCol;
 
-    public AdaptedCompRowMatrix matrix;
+    public AbstractMatrix matrix;
 
     public MatrixBlock() {
     }
@@ -31,7 +28,7 @@ public class MatrixBlock implements Serializable {
      * @param startCol
      * @param matrix
      */
-    public MatrixBlock(int startRow, int startCol, AdaptedCompRowMatrix matrix) {
+    public MatrixBlock(int startRow, int startCol, AbstractMatrix matrix) {
         this.startRow = startRow;
         this.startCol = startCol;
         this.matrix = matrix;

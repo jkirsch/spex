@@ -6,7 +6,11 @@ import com.google.common.collect.PeekingIterator;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
 import edu.tuberlin.spex.utils.TicToc;
+import no.uib.cipr.matrix.AbstractMatrix;
 import no.uib.cipr.matrix.DenseVector;
+import no.uib.cipr.matrix.sparse.CompDiagMatrix;
+import no.uib.cipr.matrix.sparse.FlexCompRowMatrix;
+import no.uib.cipr.matrix.sparse.LinkedSparseMatrix;
 import org.apache.flink.api.common.functions.RichGroupReduceFunction;
 import org.apache.flink.api.java.tuple.Tuple2;
 import org.apache.flink.api.java.tuple.Tuple3;
@@ -21,21 +25,23 @@ import java.util.List;
  * Date: 12.02.2015
  * Time: 00:21
  */
-public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> {
+public class CreateMatrixBlockFromSortedEntriesReducer extends RichGroupReduceFunction<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> {
 
     final boolean rowNormalize;
     final boolean isTransposed;
     final int rows;
     final int colums;
+    final MatrixType matrixType;
     int blocks;
     private DenseVector rowSums;
 
-    public MatrixBlockReducer(int rows, int columns, int blocks, boolean rowNormalize, boolean isTransposed) {
+    public CreateMatrixBlockFromSortedEntriesReducer(int rows, int columns, int blocks, boolean rowNormalize, boolean isTransposed, MatrixType matrixType) {
         this.rows = rows;
         this.colums = columns;
         this.blocks = blocks;
         this.rowNormalize = rowNormalize;
         this.isTransposed = isTransposed;
+        this.matrixType = matrixType;
     }
 
     @Override
@@ -101,7 +107,38 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, 
             }
         });
 
-        AdaptedCompRowMatrix matrix = AdaptedCompRowMatrix.buildFromSortedIterator(transform, blockDimensions.rows, blockDimensions.cols);
+        AbstractMatrix matrix;
+
+        switch (matrixType) {
+            case CompRowMatrix:
+                matrix = AdaptedCompRowMatrix.buildFromSortedIterator(transform, blockDimensions.rows, blockDimensions.cols);
+                break;
+            case CompDiagMatrix:
+                matrix = new CompDiagMatrix(blockDimensions.rows, blockDimensions.cols);
+                while (transform.hasNext()) {
+                    Tuple3<Integer, Integer, Double> element = transform.next();
+                    matrix.set(element.f0, element.f1, element.f2);
+                }
+                break;
+            case LinkedSparseMatrix:
+                matrix = new LinkedSparseMatrix(blockDimensions.rows, blockDimensions.cols);
+                while (transform.hasNext()) {
+                    Tuple3<Integer, Integer, Double> element = transform.next();
+                    matrix.set(element.f0, element.f1, element.f2);
+                }
+                break;
+            case FlexCompRowMatrix:
+                matrix = new FlexCompRowMatrix(blockDimensions.rows, blockDimensions.cols);
+                while (transform.hasNext()) {
+                    Tuple3<Integer, Integer, Double> element = transform.next();
+                    matrix.set(element.f0, element.f1, element.f2);
+                }
+                break;
+            default:
+                throw new IllegalStateException(matrixType + " not implemented yet");
+        }
+
+
         MatrixBlock matrixBlock = new MatrixBlock(blockDimensions.getRowStart(), blockDimensions.getColStart(), matrix);
 
 
@@ -134,5 +171,12 @@ public class MatrixBlockReducer extends RichGroupReduceFunction<Tuple4<Integer, 
                 new AdaptedCompRowMatrix(matrix));*/
 
         out.collect(matrixBlock);
+    }
+
+    public enum MatrixType {
+        CompRowMatrix,
+        CompDiagMatrix,
+        LinkedSparseMatrix,
+        FlexCompRowMatrix
     }
 }
