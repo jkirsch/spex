@@ -252,13 +252,12 @@ public class MatrixVectorComputationDatasetTest {
     }
 
     @Test
-    @Ignore("Out of memory for too small matrices")
+    @Ignore("Out of memory for too big matrices")
     public void testMultiplyCompDiagMatrix() throws Exception {
 
         testEfficientMatrices(MatrixType.CompDiagMatrix, Experiment.BLOCK_JOIN_COMPRESSED_DIAGONAL);
     }
 
-    @Ignore("Serialization Error")
     @Test
     public void testMultiplyLinkedSparseMatrix() throws Exception {
 
@@ -267,6 +266,7 @@ public class MatrixVectorComputationDatasetTest {
     }
 
     @Test
+    @Ignore("Serialization Error")
     public void testMultiplyFlexCompRowMatrix() throws Exception {
 
         testEfficientMatrices(MatrixType.FlexCompRowMatrix, Experiment.BLOCK_JOIN_FLEXCOMPROWMATRIX);
