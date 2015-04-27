@@ -1,28 +1,40 @@
 package edu.tuberlin.spex.matrix;
 
-import com.google.common.base.Predicate;
+import com.google.common.base.Charsets;
+import com.google.common.base.Joiner;
 import com.google.common.base.Stopwatch;
-import com.google.common.collect.*;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Table;
+import com.google.common.collect.TreeBasedTable;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
 import edu.tuberlin.spex.experiments.ExperimentDatasets;
 import edu.tuberlin.spex.matrix.io.MatrixMarketReader;
 import edu.tuberlin.spex.matrix.kernel.TimingMatrixBlockVectorKernel;
 import edu.tuberlin.spex.matrix.mapper.AddMatrixElementBlockPartitionMapper;
-import edu.tuberlin.spex.matrix.partition.MatrixBlockReducer;
+import edu.tuberlin.spex.matrix.partition.CreateMatrixBlockFromSortedEntriesReducer;
+import edu.tuberlin.spex.matrix.partition.CreateMatrixBlockFromSortedEntriesReducer.MatrixType;
+import edu.tuberlin.spex.matrix.serializer.LinkedSparseMatrixSerializer;
+import edu.tuberlin.spex.matrix.serializer.SparseVectorSerializer;
 import edu.tuberlin.spex.utils.Utils;
 import edu.tuberlin.spex.utils.VectorBlockHelper;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
+import no.uib.cipr.matrix.DenseVector;
+import no.uib.cipr.matrix.VectorEntry;
+import no.uib.cipr.matrix.sparse.LinkedSparseMatrix;
+import no.uib.cipr.matrix.sparse.SparseVector;
 import org.apache.commons.compress.archivers.ArchiveException;
-import org.apache.commons.lang.time.StopWatch;
+import org.apache.commons.io.output.FileWriterWithEncoding;
 import org.apache.commons.math3.stat.descriptive.SummaryStatistics;
 import org.apache.flink.api.common.JobExecutionResult;
 import org.apache.flink.api.common.accumulators.Histogram;
 import org.apache.flink.api.common.functions.ReduceFunction;
 import org.apache.flink.api.common.functions.RichFlatJoinFunction;
-import org.apache.flink.api.common.functions.RichGroupReduceFunction;
+import org.apache.flink.api.common.functions.RichFlatMapFunction;
 import org.apache.flink.api.common.operators.Order;
 import org.apache.flink.api.java.ExecutionEnvironment;
+import org.apache.flink.api.java.aggregation.Aggregations;
 import org.apache.flink.api.java.io.LocalCollectionOutputFormat;
 import org.apache.flink.api.java.operators.*;
 import org.apache.flink.api.java.tuple.Tuple2;
@@ -32,20 +44,20 @@ import org.apache.flink.configuration.ConfigConstants;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.util.Collector;
 import org.junit.AfterClass;
-import org.junit.Assume;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-
-import static org.hamcrest.core.Is.is;
 
 /**
  * 22.04.2015.
@@ -65,11 +77,6 @@ public class MatrixVectorComputationDatasetTest {
     public ExperimentDatasets.Matrix testMatrix;
     @Parameterized.Parameter(value = 1)
     public int blocksize;
-
-    enum Experiment {
-        BLOCK_JOIN,
-        KEYVALUE
-    }
 
     @Parameterized.Parameters(name = "{index}: Dataset {0} {1}")
     public static List<Object[]> data() {
@@ -97,6 +104,9 @@ public class MatrixVectorComputationDatasetTest {
         conf.setInteger(ConfigConstants.TASK_MANAGER_NETWORK_NUM_BUFFERS_KEY, 4096);
 
         env = ExecutionEnvironment.createLocalEnvironment(conf);
+
+        env.registerTypeWithKryoSerializer(LinkedSparseMatrix.class, new LinkedSparseMatrixSerializer());
+        env.registerTypeWithKryoSerializer(SparseVector.class, new SparseVectorSerializer());
 
         stats = Maps.newTreeMap();
         runtime = Maps.newTreeMap();
@@ -202,19 +212,16 @@ public class MatrixVectorComputationDatasetTest {
         System.out.println();
     }
 
-    @Test
-    public void testMultiply() throws Exception {
-
+    private void testEfficientMatrices(MatrixType matrixType, Experiment experiment) throws Exception {
 
         Path path = ExperimentDatasets.get(testMatrix);
         final MatrixReaderInputFormat.MatrixInformation matrixInfo = MatrixReaderInputFormat.getMatrixInfo(path);
 
         // Generate the input data
-        GroupReduceOperator<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> matrixBlocks = generateInputData(testMatrix, blocksize);
+        GroupReduceOperator<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> matrixBlocks = generateInputData(testMatrix, blocksize, matrixType);
 
         // Generate the vector
         final DataSource<VectorBlock> denseVectorDataSource = env.fromCollection(VectorBlockHelper.createBlocks(matrixInfo.getN(), matrixInfo.getM(), blocksize, 1d));
-
 
         // now multiply
         // This bit multiplies
@@ -235,7 +242,104 @@ public class MatrixVectorComputationDatasetTest {
         List<VectorBlock> resultCollector = new ArrayList<>();
         multiplicationResults.output(new LocalCollectionOutputFormat<>(resultCollector));
 
-        executeAndStoreResults(Experiment.BLOCK_JOIN, env);
+        executeAndStoreResults(experiment, env);
+    }
+
+    @Test
+    public void testMultiplyCompRowMatrix() throws Exception {
+
+        testEfficientMatrices(MatrixType.CompRowMatrix, Experiment.BLOCK_JOIN_COMPRESSEDROW);
+    }
+
+    @Test
+    @Ignore("Out of memory for too small matrices")
+    public void testMultiplyCompDiagMatrix() throws Exception {
+
+        testEfficientMatrices(MatrixType.CompDiagMatrix, Experiment.BLOCK_JOIN_COMPRESSED_DIAGONAL);
+    }
+
+    @Ignore("Serialization Error")
+    @Test
+    public void testMultiplyLinkedSparseMatrix() throws Exception {
+
+        testEfficientMatrices(MatrixType.LinkedSparseMatrix, Experiment.BLOCK_JOIN_LINKEDSPARSEMATRIX);
+
+    }
+
+    @Test
+    public void testMultiplyFlexCompRowMatrix() throws Exception {
+
+        testEfficientMatrices(MatrixType.FlexCompRowMatrix, Experiment.BLOCK_JOIN_FLEXCOMPROWMATRIX);
+
+    }
+
+    @Test
+    public void testMultiplyBlockKeyValue() throws Exception {
+
+
+        Path path = ExperimentDatasets.get(testMatrix);
+        final MatrixReaderInputFormat.MatrixInformation matrixInfo = MatrixReaderInputFormat.getMatrixInfo(path);
+
+        // Generate the input data
+        GroupReduceOperator<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> matrixBlocks = generateInputData(testMatrix, blocksize, MatrixType.CompRowMatrix);
+
+        // Generate the vector
+        // Write Temp Data
+        File tempVector = writeTempVector(matrixInfo.getM(), 1d);
+
+        final DataSource<Tuple2<Integer, Double>> denseVector = env.readCsvFile(tempVector.getPath()).ignoreInvalidLines().fieldDelimiter(" ").types(Integer.class, Double.class);
+
+        FlatMapOperator<MatrixBlock, Tuple2<Integer, Double>> multiplicationResult = matrixBlocks.flatMap(new RichFlatMapFunction<MatrixBlock, Tuple2<Integer, Double>>() {
+
+            public Stopwatch stopwatch;
+            public Histogram histogram;
+            double[] index;
+
+            @Override
+            public void open(Configuration parameters) throws Exception {
+                super.open(parameters);
+                stopwatch = Stopwatch.createStarted();
+                histogram = getRuntimeContext().getHistogram(TimingMatrixBlockVectorKernel.TIMINGS_ACCUMULATOR);
+                // build index
+                List<Tuple2<Integer, Double>> denseVector = getRuntimeContext().getBroadcastVariable("denseVector");
+
+                index = new double[denseVector.size()];
+
+                for (Tuple2<Integer, Double> tuple2 : denseVector) {
+                    index[tuple2.f0] = tuple2.f1;
+                }
+            }
+
+            @Override
+            public void close() throws Exception {
+                super.close();
+                stopwatch.stop();
+                histogram.add(Utils.safeLongToInt(stopwatch.elapsed(TimeUnit.MICROSECONDS)));
+            }
+
+            @Override
+            public void flatMap(MatrixBlock matrixBlock, Collector<Tuple2<Integer, Double>> out) throws Exception {
+                // get qualifying vector bits
+
+                double[] values = Arrays.copyOfRange(index, matrixBlock.getStartCol(), matrixBlock.getStartCol() + matrixBlock.getMatrix().numColumns());
+
+                VectorBlock mult = (VectorBlock) matrixBlock.mult(new VectorBlock(matrixBlock.startRow, new DenseVector(values)));
+
+                for (VectorEntry vectorEntry : mult) {
+                    if (vectorEntry.get() != 0) {
+                        out.collect(new Tuple2<>(vectorEntry.index(), vectorEntry.get()));
+                    }
+                }
+            }
+        }).withBroadcastSet(denseVector, "denseVector");
+
+        AggregateOperator<Tuple2<Integer, Double>> result = multiplicationResult.groupBy(0).aggregate(Aggregations.SUM, 1);
+
+        // just collect the output locally
+        List<Tuple2<Integer, Double>> resultCollector = new ArrayList<>();
+        result.output(new LocalCollectionOutputFormat<>(resultCollector));
+
+        executeAndStoreResults(Experiment.BLOCK_KEY_VALUE, env);
 
     }
 
@@ -249,13 +353,15 @@ public class MatrixVectorComputationDatasetTest {
         final MatrixReaderInputFormat.MatrixInformation matrixInfo = MatrixReaderInputFormat.getMatrixInfo(path);
 
         // Generate the input data
-
         MatrixMarketReader matrixMarketReader = new MatrixMarketReader(env);
         MapOperator<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>> keyValues =
                 matrixMarketReader.fromPath(path).withOffsetAdjust(-1).withMatrixInformation(matrixInfo).build();
 
         // Generate the vector
-        DataSource<Tuple2<Integer, Double>> denseVector = env.fromCollection(VectorBlockHelper.createSingleVector(matrixInfo.getN(), 1d));
+        // Write Temp Data
+        File tempVector = writeTempVector(matrixInfo.getM(), 1d);
+
+        DataSource<Tuple2<Integer, Double>> denseVector = env.readCsvFile(tempVector.getPath()).ignoreInvalidLines().fieldDelimiter(" ").types(Integer.class, Double.class);
 
         // This bit multiplies
         // join Matrix.colid == Vector.rowid
@@ -282,7 +388,6 @@ public class MatrixVectorComputationDatasetTest {
             public void join(Tuple3<Integer, Integer, Double> matrixEntry, Tuple2<Integer, Double> vectorEntry, Collector<Tuple2<Integer, Double>> out) throws Exception {
 
 
-
                 // multiply
                 out.collect(new Tuple2<>(matrixEntry.f0, matrixEntry.f2 * vectorEntry.f1));
 
@@ -304,7 +409,6 @@ public class MatrixVectorComputationDatasetTest {
         executeAndStoreResults(Experiment.KEYVALUE, env);
 
 
-
     }
 
     private void executeAndStoreResults(Experiment experiment, ExecutionEnvironment env) throws Exception {
@@ -324,7 +428,7 @@ public class MatrixVectorComputationDatasetTest {
         runtime.get(experiment).put(testMatrix, blocksize, stopwatch.elapsed(TimeUnit.MILLISECONDS));
     }
 
-    private GroupReduceOperator<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> generateInputData(ExperimentDatasets.Matrix testMatrix, int blocks) throws IOException, ArchiveException {
+    private GroupReduceOperator<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> generateInputData(ExperimentDatasets.Matrix testMatrix, int blocks, MatrixType matrixType) throws IOException, ArchiveException {
         Path path = ExperimentDatasets.get(testMatrix);
 
         final MatrixReaderInputFormat.MatrixInformation matrixInfo = MatrixReaderInputFormat.getMatrixInfo(path);
@@ -344,9 +448,35 @@ public class MatrixVectorComputationDatasetTest {
                 .groupBy(3).sortGroup(0, Order.ASCENDING).sortGroup(1, Order.ASCENDING);//.sortGroup(1, Order.ASCENDING);
 
         GroupReduceOperator<Tuple4<Integer, Integer, Double, Long>, MatrixBlock> matrixBlocks = matrixWithGroupID.
-                reduceGroup(new MatrixBlockReducer(matrixInfo.getN(), matrixInfo.getM(), blocks, false, false)).name("Build Matrix Blocks");
+                reduceGroup(new CreateMatrixBlockFromSortedEntriesReducer(matrixInfo.getN(), matrixInfo.getM(), blocks, false, false, matrixType)).name("Build " + matrixType + " Matrix Blocks");
 
         return matrixBlocks;
 
+    }
+
+    private File writeTempVector(int rows, double init) throws IOException {
+        File tempFile = File.createTempFile("tempVector", "csv");
+        tempFile.deleteOnExit();
+
+        // write something to file
+        BufferedWriter writer = new BufferedWriter(new FileWriterWithEncoding(tempFile, Charsets.UTF_8));
+
+        for (int i = 0; i < rows; i++) {
+            writer.write(Joiner.on(" ").join(i, init));
+            writer.newLine();
+        }
+
+        writer.close();
+
+        return tempFile;
+    }
+
+    enum Experiment {
+        BLOCK_JOIN_COMPRESSEDROW,
+        BLOCK_JOIN_COMPRESSED_DIAGONAL,
+        BLOCK_JOIN_LINKEDSPARSEMATRIX,
+        BLOCK_JOIN_FLEXCOMPROWMATRIX,
+        BLOCK_KEY_VALUE,
+        KEYVALUE
     }
 }
