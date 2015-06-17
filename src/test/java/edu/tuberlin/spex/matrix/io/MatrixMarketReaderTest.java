@@ -30,7 +30,7 @@ public class MatrixMarketReaderTest {
                 matrixMarketReader.fromPath(path).withOffsetAdjust(-1).withMatrixInformation(matrixInfo).build();
 
 
-        build.print();
+        build.printOnTaskManager("Local");
 
         env.execute();
 

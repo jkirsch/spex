@@ -32,7 +32,7 @@
         <timestamp>${maven.build.timestamp}</timestamp>
 
         <flink.version>0.9-SNAPSHOT</flink.version>
-        <spring.boot.version>1.2.3.RELEASE</spring.boot.version>
+        <spring.boot.version>1.2.4.RELEASE</spring.boot.version>
 
         <guava.version>18.0</guava.version>
 
@@ -68,7 +68,7 @@
         <dependency>
             <groupId>com.googlecode.matrix-toolkits-java</groupId>
             <artifactId>mtj</artifactId>
-            <version>1.0.2</version>
+            <version>1.0.3</version>
         </dependency>
 
         <dependency>
@@ -89,6 +89,21 @@
             <scope>test</scope>
         </dependency>
 
+
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-core</artifactId>
+            <version>1.10</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjdk.jmh</groupId>
+            <artifactId>jmh-generator-annprocess</artifactId>
+            <version>1.10</version>
+            <scope>test</scope>
+        </dependency>
+
         <dependency>
             <groupId>org.apache.flink</groupId>
             <artifactId>flink-java</artifactId>
@@ -103,6 +118,19 @@
             <groupId>com.googlecode.javaewah</groupId>
             <artifactId>JavaEWAH</artifactId>
             <version>1.0.2</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.carrotsearch</groupId>
+            <artifactId>java-sizeof</artifactId>
+            <version>0.0.5</version>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>me.lemire.integercompression</groupId>
+            <artifactId>JavaFastPFOR</artifactId>
+            <version>0.1.2</version>
         </dependency>
 
     </dependencies>

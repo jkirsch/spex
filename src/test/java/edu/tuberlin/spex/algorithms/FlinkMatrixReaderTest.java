@@ -72,7 +72,7 @@ public class FlinkMatrixReaderTest {
 
         DataSet<Tuple2<Integer, VectorBlock>> tuple2DataSet = iterate.closeWith(delta, delta);
 
-        tuple2DataSet.print();
+        tuple2DataSet.printOnTaskManager("Local");
 
         env.execute();
 

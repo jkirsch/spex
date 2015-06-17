@@ -1,14 +1,10 @@
 package edu.tuberlin.spex.matrix.io;
 
-import com.google.common.collect.Iterables;
 import edu.tuberlin.spex.experiments.ExperimentDatasets;
 import edu.tuberlin.spex.utils.io.MatrixReaderInputFormat;
-import org.apache.flink.api.common.functions.GroupReduceFunction;
 import org.apache.flink.api.java.ExecutionEnvironment;
-import org.apache.flink.api.java.operators.GroupReduceOperator;
 import org.apache.flink.api.java.operators.MapOperator;
 import org.apache.flink.api.java.tuple.Tuple3;
-import org.apache.flink.util.Collector;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -25,7 +21,6 @@ import static org.junit.Assert.assertThat;
 /**
  * 21.04.2015.
  *
- * @author Johannes Kirschnick
  */
 @RunWith(Parameterized.class)
 public class ReadMatrixFilesTest {
@@ -56,23 +51,7 @@ public class ReadMatrixFilesTest {
         MapOperator<Tuple3<Integer, Integer, Double>, Tuple3<Integer, Integer, Double>> build =
                 matrixMarketReader.fromPath(path).withOffsetAdjust(-1).withMatrixInformation(matrixInfo).build();
 
-        GroupReduceOperator<Tuple3<Integer, Integer, Double>, Long> counts = build.reduceGroup(new GroupReduceFunction<Tuple3<Integer, Integer, Double>, Long>() {
-            @Override
-            public void reduce(Iterable<Tuple3<Integer, Integer, Double>> values, Collector<Long> out) throws Exception {
-                long count = 0;
-                for (Tuple3<Integer, Integer, Double> ignored : values) {
-                    count++;
-                }
-                out.collect(count);
-            }
-        });
-
-        Long counted = Iterables.getOnlyElement(counts.collect());
-
-        // print is here to ensure we have some output
-        counts.print();
-
-        env.execute();
+        Long counted = build.count();
 
         LOG.info(matrixInfo.toString());
 
