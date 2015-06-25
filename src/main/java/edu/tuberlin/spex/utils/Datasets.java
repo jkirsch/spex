@@ -62,7 +62,7 @@ public class Datasets {
 
         stopwatch.stop();
 
-        LOG.info("Downloaded in {} with {} in {} Kb/s",
+        LOG.info("Downloaded in {} total {} with {} Kb/s",
                 stopwatch.toString(),
                 FileUtils.byteCountToDisplaySize(outputFile.length()),
                 (outputFile.length() / 1024 / stopwatch.elapsed(TimeUnit.SECONDS)));

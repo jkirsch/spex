@@ -31,7 +31,7 @@
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ssa</maven.build.timestamp.format>
         <timestamp>${maven.build.timestamp}</timestamp>
 
-        <flink.version>0.9-SNAPSHOT</flink.version>
+        <flink.version>0.9.0</flink.version>
         <spring.boot.version>1.2.4.RELEASE</spring.boot.version>
 
         <guava.version>18.0</guava.version>
