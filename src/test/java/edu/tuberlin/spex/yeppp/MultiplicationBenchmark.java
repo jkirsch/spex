@@ -1,7 +1,6 @@
 package edu.tuberlin.spex.yeppp;
 
 import edu.tuberlin.spex.utils.VectorHelper;
-import info.yeppp.Core;
 import no.uib.cipr.matrix.DenseVector;
 import org.apache.commons.compress.archivers.ArchiveException;
 import org.openjdk.jmh.annotations.*;
@@ -36,7 +35,7 @@ public class MultiplicationBenchmark {
     @Benchmark
     public void yepp(){
 
-        double res = Core.DotProduct_V64fV64f_S64f(one.getData(), 0, two.getData(), 0, two.size());
+        //double res = Core.DotProduct_V64fV64f_S64f(one.getData(), 0, two.getData(), 0, two.size());
 
     }
 }
