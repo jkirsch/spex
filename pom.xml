@@ -32,7 +32,7 @@
         <timestamp>${maven.build.timestamp}</timestamp>
 
         <flink.version>0.9.0</flink.version>
-        <spring.boot.version>1.2.4.RELEASE</spring.boot.version>
+        <spring.boot.version>1.2.5.RELEASE</spring.boot.version>
 
         <guava.version>18.0</guava.version>
 
@@ -49,6 +49,8 @@
         <logback.configurationFile>logback-test.xml</logback.configurationFile>
 
         <argLine>-Xms256m -Xmx800m -Dmvn.forkNumber=${surefire.forkNumber} -XX:-UseGCOverheadLimit -Dlogback.configurationFile=${logback.configurationFile}</argLine>
+
+        <checkstyle.config.location>conf/checkstyle.xml</checkstyle.config.location>
 
     </properties>
 
@@ -68,7 +70,7 @@
         <dependency>
             <groupId>com.googlecode.matrix-toolkits-java</groupId>
             <artifactId>mtj</artifactId>
-            <version>1.0.3</version>
+            <version>1.0.4</version>
         </dependency>
 
         <dependency>
@@ -326,7 +328,7 @@
                     <dependency>
                         <groupId>com.puppycrawl.tools</groupId>
                         <artifactId>checkstyle</artifactId>
-                        <version>6.7</version>
+                        <version>6.8.1</version>
                     </dependency>
                 </dependencies>
                 <executions>
