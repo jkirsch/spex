@@ -31,7 +31,7 @@
         <maven.build.timestamp.format>yyyy-MM-dd HH:mm:ssa</maven.build.timestamp.format>
         <timestamp>${maven.build.timestamp}</timestamp>
 
-        <flink.version>0.9.0</flink.version>
+        <flink.version>0.9.1</flink.version>
         <spring.boot.version>1.2.5.RELEASE</spring.boot.version>
 
         <guava.version>18.0</guava.version>
@@ -95,14 +95,14 @@
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-core</artifactId>
-            <version>1.10.5</version>
+            <version>1.11</version>
             <scope>test</scope>
         </dependency>
 
         <dependency>
             <groupId>org.openjdk.jmh</groupId>
             <artifactId>jmh-generator-annprocess</artifactId>
-            <version>1.10.5</version>
+            <version>1.11</version>
             <scope>test</scope>
         </dependency>
 
