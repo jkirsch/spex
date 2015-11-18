@@ -5,7 +5,9 @@ import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.fs.FileInputSplit;
 import org.apache.flink.core.fs.Path;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -16,6 +18,9 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 
 public class MatrixReaderInputFormatTest {
+
+    @Rule
+    public TemporaryFolder folder = new TemporaryFolder();
 
     @Test
     public void testRead() throws Exception {
@@ -62,8 +67,8 @@ public class MatrixReaderInputFormatTest {
     }
 
     private FileInputSplit createTempFile(String content) throws IOException {
-        File tempFile = File.createTempFile("test_contents", "tmp");
-        tempFile.deleteOnExit();
+
+        File tempFile = folder.newFile("test_content.tmp");
 
         OutputStreamWriter wrt = new OutputStreamWriter(
                 new FileOutputStream(tempFile), Charsets.UTF_8
