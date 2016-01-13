@@ -11,7 +11,8 @@ language: java
 install: echo 'Skipping mvn install'
 
 script:
-  - mvn test -P coveralls
+   - mvn test
+#  - mvn test -P coveralls
 
-after_script:
-  - mvn jacoco:report coveralls:report -P coveralls
+#after_script:
+#  - mvn jacoco:report coveralls:report -P coveralls
