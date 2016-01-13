@@ -49,7 +49,7 @@
         <!-- For testing reduce the logging -->
         <logback.configurationFile>logback-test.xml</logback.configurationFile>
 
-        <argLine>-Xms256m -Xmx2g -Dmvn.forkNumber=${surefire.forkNumber} -XX:-UseGCOverheadLimit -Dlogback.configurationFile=${logback.configurationFile}</argLine>
+        <argLine>-Xms256m -Xmx3g -Dmvn.forkNumber=${surefire.forkNumber} -XX:-UseGCOverheadLimit -Dlogback.configurationFile=${logback.configurationFile}</argLine>
 
         <checkstyle.config.location>conf/checkstyle.xml</checkstyle.config.location>
 
@@ -400,6 +400,7 @@
                             <log.level>WARN</log.level>
                         </systemPropertyVariables>
                     </configuration>
+                    <argLine>${argLine}</argLine>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
