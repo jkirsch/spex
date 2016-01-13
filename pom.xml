@@ -44,7 +44,7 @@
         <!-- Need to use a user property here because the surefire/failsafe
              forkCount is not exposed as a property. With this we can set
              it on the "mvn" commandline in travis. -->
-        <flink.forkCount>1.5C</flink.forkCount>
+        <flink.forkCount>1</flink.forkCount>
         <flink.reuseForks>true</flink.reuseForks>
         <!-- For testing reduce the logging -->
         <logback.configurationFile>logback-test.xml</logback.configurationFile>
@@ -400,7 +400,6 @@
                             <log.level>WARN</log.level>
                         </systemPropertyVariables>
                     </configuration>
-                    <argLine>${argLine}</argLine>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
