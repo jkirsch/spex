@@ -38,7 +38,7 @@
 
         <jacoco.version>0.7.5.201505241946</jacoco.version>
         <coveralls-maven.version>4.1.0</coveralls-maven.version>
-        <jmh.version>1.11.2</jmh.version>
+        <jmh.version>1.11.3</jmh.version>
 
         <!-- COPIED FROM FLINK MASTER-->
         <!-- Need to use a user property here because the surefire/failsafe
