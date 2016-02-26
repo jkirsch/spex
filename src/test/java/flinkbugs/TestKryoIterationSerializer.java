@@ -28,7 +28,7 @@ public class TestKryoIterationSerializer {
 
         // this is an artificial program, it does not compute anything sensical
         ExecutionEnvironment env = ExecutionEnvironment.getExecutionEnvironment();
-        //env.addDefaultKryoSerializer(DomainObject.class, new DomainObjectSerializer());
+        env.addDefaultKryoSerializer(DomainObject.class, new DomainObjectSerializer());
 
         DataSource<DomainObject> source = env.fromCollection(generateDomainObjects(10, 10));
 
