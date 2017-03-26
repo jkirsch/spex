@@ -135,8 +135,8 @@ public class PageRankFlink {
 
         aggregate.print();
         //cellDataSet.print();
-
         System.out.println(env.getExecutionPlan());
+
 
         env.execute();
 

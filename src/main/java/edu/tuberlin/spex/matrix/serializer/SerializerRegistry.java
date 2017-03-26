@@ -14,6 +14,10 @@ public class SerializerRegistry {
 
         // Register Serializer
 
+        //env.getConfig().registerTypeWithKryoSerializer(LinkedSparseMatrix.class, LinkedSparseMatrixSerializer.class);
+        //env.addDefaultKryoSerializer(FlexCompRowMatrix.class, FlexCompRowMatrixSerializer.class);
+        //env.addDefaultKryoSerializer(CompDiagMatrix.class, CompDiagMatrixSerializer.class);
+
         /*env.addDefaultKryoSerializer(DenseMatrix.class, DenseMatrixSerializer.class);
         env.addDefaultKryoSerializer(LinkedSparseMatrix.class, LinkedSparseMatrixSerializer.class);
 

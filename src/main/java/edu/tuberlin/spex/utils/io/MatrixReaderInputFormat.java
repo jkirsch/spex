@@ -11,6 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.flink.api.common.io.DelimitedInputFormat;
 import org.apache.flink.api.java.tuple.Tuple3;
 import org.apache.flink.configuration.Configuration;
+import org.apache.flink.configuration.GlobalConfiguration;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.types.parser.IntParser;
 
@@ -59,7 +60,7 @@ public class MatrixReaderInputFormat extends DelimitedInputFormat<Tuple3<Integer
     }
 
     public MatrixReaderInputFormat(Path filePath, int indexOffset, int size, boolean transpose) {
-        super(filePath);
+        super(filePath, GlobalConfiguration.loadConfiguration());
         this.indexOffset = indexOffset;
         this.size = size;
         this.transpose = transpose;

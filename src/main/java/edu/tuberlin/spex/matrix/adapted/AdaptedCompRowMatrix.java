@@ -385,6 +385,92 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         return C;
     }
 
+
+    public Vector multUnrolled(DenseVector x, DenseVector y) {
+
+        //c = A*b
+
+        double[] b = x.getData();
+        double[] c = y.zero().getData();
+
+        for (int i = 0; i < numRows; ++i) {
+            double dot = 0;
+
+            int from = rowPointer.get(i);
+            int to = rowPointer.get(i + 1);
+            int len = to - from;
+
+            final int bn = len % 8;
+
+            //compute rest
+            for( int s = 0; s < bn; s++ )
+                dot += data.get(from + s) * b[columnIndex.get(from + s)];
+
+
+            for (int j = from + bn; j < to; j+=8) {
+                dot +=
+                        data.get(j) * b[columnIndex.get(j)] +
+                        data.get(j + 1) * b[columnIndex.get(j + 1)] +
+                        data.get(j + 2) * b[columnIndex.get(j + 2)] +
+                        data.get(j + 3) * b[columnIndex.get(j + 3)] +
+                        data.get(j + 4) * b[columnIndex.get(j + 4)] +
+                        data.get(j + 5) * b[columnIndex.get(j + 5)] +
+                        data.get(j + 6) * b[columnIndex.get(j + 6)] +
+                        data.get(j + 7) * b[columnIndex.get(j + 7)];
+            }
+            if(dot != 0) {
+                c[i] = dot;
+            }
+        }
+
+
+        return y;
+    }
+
+    ////////////////////////////////////////////
+    // performance-relevant utility functions //
+    ////////////////////////////////////////////
+
+    /**
+     * Computes the dot-product of two vectors. Experiments (on long vectors of
+     * 10^7 values) showed that this generic function provides equivalent performance
+     * even for the specific case of dotProduct(a,a,len) as used for TSMM.
+     *
+     * @param a
+     * @param b
+     * @param len
+     * @return
+     */
+    private static double dotProduct( double[] a, double[] b, final int len )
+    {
+        double val = 0;
+        final int bn = len%8;
+
+        //compute rest
+        for( int i = 0; i < bn; i++ )
+            val += a[ i ] * b[ i ];
+
+        //unrolled 8-block  (for better instruction-level parallelism)
+        for( int i = bn; i < len; i+=8 )
+        {
+            //read 64B cachelines of a and b
+            //compute cval' = sum(a * b) + cval
+            val += a[ i+0 ] * b[ i+0 ]
+                    + a[ i+1 ] * b[ i+1 ]
+                    + a[ i+2 ] * b[ i+2 ]
+                    + a[ i+3 ] * b[ i+3 ]
+                    + a[ i+4 ] * b[ i+4 ]
+                    + a[ i+5 ] * b[ i+5 ]
+                    + a[ i+6 ] * b[ i+6 ]
+                    + a[ i+7 ] * b[ i+7 ];
+        }
+
+        //scalar result
+        return val;
+    }
+
+
+
     @Override
     public Vector mult(Vector x, Vector y) {
         // check dimensions
@@ -394,6 +480,9 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
         if (x instanceof DenseVector) {
             // DenseVector optimisations
+
+            //return multUnrolled((DenseVector) x, (DenseVector) y);
+
             double[] xd = ((DenseVector) x).getData();
             for (int i = 0; i < numRows; ++i) {
                 double dot = 0;
@@ -589,6 +678,15 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             out.write(byteBuffer.array());
         } else {
 
+   /*         FpcCompressor fpcCompressor = new FpcCompressor();
+            ByteBuffer byteBuffer = ByteBuffer.allocate(data.capacity());
+            fpcCompressor.compress(byteBuffer, data.array());
+
+            int compressedSize = byteBuffer.position();
+            byteBuffer.flip();
+
+            out.writeInt(compressedSize);*/
+
             for (int i = 0; i < columnIndex.limit(); i++) {
                 out.writeInt(columnIndex.get(i));
             }
@@ -596,6 +694,9 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
             for (int i = 0; i < rowPointer.limit(); i++) {
                 out.writeInt(rowPointer.get(i));
             }
+
+
+       //     out.write(byteBuffer.array(),0, compressedSize);
 
             for (int i = 0; i < data.capacity(); i++) {
                 out.writeDouble(data.get(i));
@@ -615,14 +716,37 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
         int rowSize = in.readInt();
         int dataSize = in.readInt();
 
+  /*      byte[] byteArray = new byte[5 * 4];
+        in.read(byteArray);
+
+        IntBuffer intBuf =
+                ByteBuffer.wrap(byteArray)
+                        .order(ByteOrder.BIG_ENDIAN)
+                        .asIntBuffer();
+
+        numRows = intBuf.get();
+        numColumns = intBuf.get();
+
+        int colSize = intBuf.get();
+        int rowSize = intBuf.get();
+        int dataSize = intBuf.get();*/
+
+ //       int compressedDataBytesSize = in.readInt();
+
 
         //columnIndex = new int[colSize];
         //rowPointer = new int[rowSize];
         //data = new double[dataSize];
 
 
+        //byteBuffer = MemoryPool.get(colSize, rowSize, dataSize);
+
         byteBuffer = ByteBuffer.allocate(colSize * 4 + rowSize * 4 + dataSize * 8);
-        in.read(byteBuffer.array());
+
+        //   byteBuffer = ByteBuffer.allocate(colSize * 4 + rowSize * 4 + compressedDataBytesSize);
+        int read = in.read(byteBuffer.array());
+
+   //     Preconditions.checkArgument(read == byteBuffer.capacity(), "Did not read enough elements");
 
         //IntBuffer colBuf = IntBuffer.wrap(columnIndex);
         //IntBuffer rowBuf = IntBuffer.wrap(rowPointer);
@@ -638,8 +762,19 @@ public class AdaptedCompRowMatrix extends AbstractMatrix implements Value {
 
         byteBuffer.position(colSize * 4 + rowSize * 4);
 
-        // the remaining
         data = byteBuffer.asDoubleBuffer();
+
+        // the remaining is the compressed
+
+ /*       double[] a = new double[dataSize];
+
+        FpcCompressor fpcCompressor = new FpcCompressor();
+        fpcCompressor.decompress(byteBuffer, a);
+
+       // dataBuffer.flip();
+
+        data = DoubleBuffer.wrap(a);*/
+
         //DoubleBuffer.wrap(data).put(byteBuffer.asDoubleBuffer());
 
 

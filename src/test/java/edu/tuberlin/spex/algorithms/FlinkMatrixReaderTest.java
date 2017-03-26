@@ -2,6 +2,7 @@ package edu.tuberlin.spex.algorithms;
 
 import com.google.common.collect.Lists;
 import edu.tuberlin.spex.algorithms.domain.VectorBlock;
+import edu.tuberlin.spex.matrix.serializer.SerializerRegistry;
 import edu.tuberlin.spex.utils.VectorBlockHelper;
 import no.uib.cipr.matrix.DenseMatrix;
 import no.uib.cipr.matrix.DenseVector;
@@ -119,6 +120,8 @@ public class FlinkMatrixReaderTest {
         conf.setInteger(ConfigConstants.TASK_MANAGER_NETWORK_NUM_BUFFERS_KEY, 4096);
 
         ExecutionEnvironment env = ExecutionEnvironment.createLocalEnvironment(conf);
+
+        SerializerRegistry.register(env);
 
         final double alpha = 0.80;
         final int n = 8;

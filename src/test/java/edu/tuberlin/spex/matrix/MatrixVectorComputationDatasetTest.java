@@ -87,7 +87,7 @@ public class MatrixVectorComputationDatasetTest {
         // build the cross product of all test with a couple different blocksizes
         List<Object[]> parameters = Lists.newArrayList();
 
-        for (ExperimentDatasets.Matrix matrix : ExperimentDatasets.Matrix.values()) {
+        for (ExperimentDatasets.Matrix matrix : EnumSet.of(ExperimentDatasets.Matrix.conf5_0)) {//ExperimentDatasets.Matrix.values()) {
             for (int blocksize : blocksizes) {
                 parameters.add(new Object[]{matrix, blocksize});
             }

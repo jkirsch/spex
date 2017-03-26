@@ -5,6 +5,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.PeekingIterator;
 import edu.tuberlin.spex.algorithms.domain.MatrixBlock;
 import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrix;
+import edu.tuberlin.spex.matrix.adapted.AdaptedCompRowMatrixUnsafe;
 import edu.tuberlin.spex.utils.TicToc;
 import no.uib.cipr.matrix.AbstractMatrix;
 import no.uib.cipr.matrix.DenseVector;
@@ -109,9 +110,14 @@ public class CreateMatrixBlockFromSortedEntriesReducer extends RichGroupReduceFu
 
         AbstractMatrix matrix;
 
-        switch (matrixType) {
+      //  matrix = PickFastestMatrix.generateFastestMatrix(transform, blockDimensions.rows, blockDimensions.cols);
+
+       switch (matrixType) {
             case CompRowMatrix:
                 matrix = AdaptedCompRowMatrix.buildFromSortedIterator(transform, blockDimensions.rows, blockDimensions.cols);
+                break;
+           case CompRowMatrixUnsafe:
+                matrix = AdaptedCompRowMatrixUnsafe.buildFromSortedIterator(transform, blockDimensions.rows, blockDimensions.cols);
                 break;
             case CompDiagMatrix:
                 matrix = new CompDiagMatrix(blockDimensions.rows, blockDimensions.cols);
@@ -175,6 +181,7 @@ public class CreateMatrixBlockFromSortedEntriesReducer extends RichGroupReduceFu
 
     public enum MatrixType {
         CompRowMatrix,
+        CompRowMatrixUnsafe,
         CompDiagMatrix,
         LinkedSparseMatrix,
         FlexCompRowMatrix

@@ -1,6 +1,5 @@
 package edu.tuberlin.spex.algorithms;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.Iterables;
 import com.google.common.math.DoubleMath;
@@ -58,7 +57,6 @@ public class FlinkMatrixReader implements Serializable {
         try {
             LOG.info("Loading configuration from conf/");
             GlobalConfiguration.loadConfiguration("conf");
-            GlobalConfiguration.getConfiguration();
         }
         catch (Exception e) {
             throw new Exception("Could not load configuration", e);
@@ -74,8 +72,10 @@ public class FlinkMatrixReader implements Serializable {
 
         double alpha = 0.85;
         String path = "datasets/webNotreDame.mtx";
+        //String path = "datasets/webBerkStan.mtx";
+        //String path = "datasets/webBerkStan-reordered.mtx";
 
-        int[] blockSizes = new int[]{1,2,4,8,16,32,64,128};
+        int[] blockSizes = /*new int[] {4};//*/new int[]{1,2,4,8,16,32,64,128};
 
         if (args.length > 0) {
             path = args[0];
@@ -97,10 +97,14 @@ public class FlinkMatrixReader implements Serializable {
         Map<Integer, Stopwatch> timings = new TreeMap<>();
         Map<Integer, List<Tuple2<Long, Integer>>> counts = new HashMap<>();
 
+        // TODO warmup
+        DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path(path), -1, n, true)).name("Edge list");
+     //   flinkMatrixReader.executePageRank(env, alpha, 1, input, n, 45);
+
         for (Integer blocksize : blockSizes) {
 
-            DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path(path), -1, n, true)).name("Edge list");
-            TimingResult timingResult = flinkMatrixReader.executePageRank(env, alpha, blocksize, input, n, 100);
+            //DataSource<Tuple3<Integer, Integer, Double>> input = env.createInput(new MatrixReaderInputFormat(new Path(path), -1, n, true)).name("Edge list");
+            TimingResult timingResult = flinkMatrixReader.executePageRank(env, alpha, blocksize, input, n, 50);
             timings.put(blocksize, timingResult.stopwatch);
 
             // Enable the next line, if you are interested in the distribution of the blocks
@@ -211,7 +215,7 @@ public class FlinkMatrixReader implements Serializable {
 
         FilterOperator<DanglingNodeInformationBitSet> personalizationVector = blocksCounter.map(new RichMapFunction<Long, DanglingNodeInformationBitSet>() {
 
-            public BitSet bitSet;
+            BitSet bitSet;
 
             @Override
             public void open(Configuration parameters) throws Exception {
@@ -511,7 +515,7 @@ public class FlinkMatrixReader implements Serializable {
 
         System.out.println(sum);
 
-        Preconditions.checkArgument((Math.abs(sum - 1) - 0.001) <= 0.0, String.format("Overall sum not within bounds %1.5f n=%d b=%d", sum, n, blocks));
+        //Preconditions.checkArgument((Math.abs(sum - 1) - 0.001) <= 0.0, String.format("Overall sum not within bounds %1.5f n=%d b=%d", sum, n, blocks));
 
         return new TimingResult(resultCollector, stopwatch);
 
